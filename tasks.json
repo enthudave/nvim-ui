@@ -1,0 +1,5 @@
+{
+  "tasks": {
+    "run": "./node_modules/.bin/electron src/main.js"
+  }
+}
