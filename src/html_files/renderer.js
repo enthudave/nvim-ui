@@ -326,39 +326,6 @@ class Renderer {
     }
   };
 
-  grid_scroll_a = (args) => {
-    for (const [grid, top, bot, left, right, rows] of args) {
-
-      const height = bot - top;
-      const width = right - left;
-
-      const copyRegion = (src, dest) => {
-        for (let i = 0; i < height; i++) {
-          const srcRow = src(i);
-          const destRow = dest(i);
-          if (
-            srcRow >= top &&
-            srcRow < bot &&
-            destRow >= top &&
-            destRow < bot &&
-            this.grids[grid].frameBuffer[srcRow] &&
-            this.grids[grid].frameBuffer[destRow]
-          ) {
-            for (let col = left; col < right; col++) {
-              this.grids[grid].frameBuffer[destRow][col] = this.grids[grid].frameBuffer[srcRow][col];
-            }
-          }
-        }
-      };
-
-      if (rows > 0) {
-        copyRegion(i => top + i, i => top + i - rows);
-      } else if (rows < 0) {
-        copyRegion(i => bot - 1 - i, i => bot - 1 - i - rows);
-      }
-    }
-  };
-
   hl_attr_define = (args) => {
     for (const [id, hl, , info_array] of args) { // Renamed 'info' to 'info_array' for clarity
       if (id === 0) console.error(
