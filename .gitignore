@@ -131,3 +131,5 @@ $RECYCLE.BIN/
 !.vscode/extensions.json
 *.sublime-workspace
 MAP.json
+.vscode/launch.json
+.editorconfig
