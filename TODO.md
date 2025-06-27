@@ -10,6 +10,8 @@
 
 - chdir event
 
+- License
+
 ## Performance Optimizations
 
 - Optimize rendering loop with dirty-checking to only redraw changed cells.
