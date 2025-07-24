@@ -14,7 +14,6 @@
 
 ## Performance Optimizations
 
-- Optimize rendering loop with dirty-checking to only redraw changed cells.
 - Use CSS animations or `requestAnimationFrame` for smoother cursor blinking.
 - Synchronize all rendering updates with the browser's repaint cycle using `requestAnimationFrame`.
 - Debounce `redraw` events to prevent the renderer from being overwhelmed.
