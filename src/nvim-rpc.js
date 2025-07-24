@@ -19,7 +19,6 @@ class NvimRPC extends EventEmitter {
     ipcMain.on('mouse-event', this._onMouseEvent);
     ipcMain.on('resize-request', this._onResizeRequest);
     ipcMain.on('key-event', this._onKeyEvent);
-    ipcMain.on('renderer-log', this._onRendererLog);
 
     this.window.webContents.on('did-finish-load', () => {
       this._initializeWindowConnection();
@@ -139,7 +138,6 @@ class NvimRPC extends EventEmitter {
     ipcMain.removeListener('mouse-event', this._onMouseEvent);
     ipcMain.removeListener('resize-request', this._onResizeRequest);
     ipcMain.removeListener('key-event', this._onKeyEvent);
-    ipcMain.removeListener('renderer-log', this._onRendererLog);
   };
 
   _onKeyEvent = (event, keyevent) => {

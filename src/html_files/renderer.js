@@ -19,50 +19,42 @@ class Renderer {
 
   constructor() {
     this.globalVariables = {};
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'relative';
-
-    // Create and store the nvim-container div
-    this.nvimContainer = document.createElement('div');
-    this.nvimContainer.id = 'nvim-container';
-    this.nvimContainer.style.position = 'absolute';
-    this.nvimContainer.style.overflow = 'hidden';
-    // Set dimensions for the nvim container
-    this.nvimContainer.style.width = 'calc(100%)'; // Remaining width after sidebar
-    this.nvimContainer.style.height = '100vh'; // Full height of the viewport
-    this.nvimContainer.style.boxSizing = 'border-box';
-    this.nvimContainer.style.top = '0';
-
-    document.body.appendChild(this.nvimContainer);
-
     this.grids = {};
     this.grids[1] = new Grid();
-    document.getElementById('nvim-container').appendChild(this.grids[1].canvas);
+    this.dirtyCells = new Set();
+    this.initial_font();
+    this.highlights = new Map();
+    this.highlightGroups = {};
+    this.modeInfo = null;
+    this.isDragging = false;
+    this.mouseButton = null;
+    this.cursorPos = { grid: 1, row: 0, col: 0 };
+    this.cursorVisible = true;
 
     this.cursorElement = document.createElement('div');
-    // this.cursorElement.style.position = 'absolute';
     this.cursorElement.style.pointerEvents = 'none';
     this.cursorElement.style.backgroundColor = 'rgba(255, 0, 255, 0.5)';
     this.cursorElement.style.opacity = '1';
     this.cursorElement.style.transition = 'opacity 0.05s linear';
     this.cursorElement.style.zIndex = '10';
 
+    this.nvimContainer = document.createElement('div');
+    this.nvimContainer.id = 'nvim-container';
+    this.nvimContainer.style.position = 'absolute';
+    this.nvimContainer.style.overflow = 'hidden';
+    this.nvimContainer.style.width = 'calc(100%)'; // Remaining width after sidebar
+    this.nvimContainer.style.height = '100vh'; // Full height of the viewport
+    this.nvimContainer.style.boxSizing = 'border-box';
+    this.nvimContainer.style.top = '0';
+    this.nvimContainer.appendChild(this.grids[1].canvas);
     this.nvimContainer.appendChild(this.cursorElement);
 
-    // global variables
-    this.initial_font();
-    this.highlights = new Map();
-    this.highlightGroups = {};
-    this.modeInfo = null;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'relative';
 
-    this.cursorPos = { grid: 1, row: 0, col: 0 };
-    this.cursorVisible = true;
+    document.body.appendChild(this.nvimContainer);
 
     this.initEventListeners();
-
-    this.isDragging = false;
-    this.mouseButton = null;
-
   };
 
   busy_start = () => {
@@ -150,16 +142,15 @@ class Renderer {
   }
 
   flush = () => {
-    // Iterate over all grids in the object
-    for (const [, grid] of Object.entries(this.grids)) {
-      grid.context.clearRect(0, 0, grid.canvas.width, grid.canvas.height);
-      for (let row = 0; row < grid.frameBuffer.length; row++) {
-        for (let col = 0; col < grid.frameBuffer[row].length; col++) {
-          // Call the new _renderCell method
-          this._renderCell(grid, row, col);
-        }
-      }
+    // Iterate only over the dirty cells
+    for (const cellKey of this.dirtyCells) {
+      const [grid, row, col] = cellKey.split(',').map(Number);
+      this._renderCell(this.grids[grid], row, col);
     }
+
+    // Clear the dirty set after flushing
+    this.dirtyCells.clear();
+
     this.renderCursorOverlay();
   };
 
@@ -202,6 +193,9 @@ class Renderer {
               console.error(`Row ${row} is out of bounds`);
               continue;
             }
+
+            this.dirtyCells.add(`${grid},${row},${column}`);
+
             const baseHl = this.highlights.get(hlId);
             const defaultHl = this.highlights.get(0);
 
@@ -583,8 +577,8 @@ class Renderer {
     event.preventDefault();
   };
 
-  initial_font(){
-    this.setGuifont({fontName: 'monospace', fontSize: 16});
+  initial_font() {
+    this.setGuifont({ fontName: 'monospace', fontSize: 16 });
   }
 
   setGuifont(guifont) {
@@ -611,8 +605,8 @@ class Renderer {
       : 2.5;
 
     //console.log('setCellDimensions: ', height_multiplier, width_multiplier);
-    this.grids[1].cellHeight = Math.ceil(this.fontHeight * (1 + height_multiplier/10));
-    this.grids[1].cellWidth = Math.ceil(this.fontWidth * (1 + width_multiplier/10));
+    this.grids[1].cellHeight = Math.ceil(this.fontHeight * (1 + height_multiplier / 10));
+    this.grids[1].cellWidth = Math.ceil(this.fontWidth * (1 + width_multiplier / 10));
   }
 
   setGlobalVariables(args) {
@@ -628,7 +622,7 @@ class Renderer {
     this.height = container.clientHeight;
     if (this.shouldResizeGrid()) {
       //console.log('this.grids[1].columns:', this.grids[1].columns,
-        //'this.grids[1].rows:', this.grids[1].rows);
+      //'this.grids[1].rows:', this.grids[1].rows);
       window.Electron.sendResize(this.grids[1].columns, this.grids[1].rows);
     }
   };
@@ -730,8 +724,7 @@ class Renderer {
 
     const { grid: gridId, row, col } = this.cursorPos;
     const currentGrid = this.grids[gridId];
-
-    // Add log for current cursorHlId at the start of renderCursorOverlay
+    this.dirtyCells.add(`${gridId},${row},${col}`);
 
     if (!this.cursorVisible || !currentGrid || !currentGrid.frameBuffer[row] || !currentGrid.frameBuffer[row][col]) {
       this.cursorElement.style.visibility = 'hidden';
