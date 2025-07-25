@@ -279,6 +279,7 @@ class Renderer {
           ) {
             for (let col = left; col < right; col++) {
               this.grids[grid].frameBuffer[destRow][col] = this.grids[grid].frameBuffer[srcRow][col];
+              this.dirtyCells.add(`${grid},${destRow},${col}`);
             }
           }
         }
@@ -298,6 +299,7 @@ class Renderer {
               destCol < right
             ) {
               this.grids[grid].frameBuffer[row][destCol] = this.grids[grid].frameBuffer[row][srcCol];
+              this.dirtyCells.add(`${grid},${row},${destCol}`);
             }
           }
         }
