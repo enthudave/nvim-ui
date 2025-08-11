@@ -1,5 +1,7 @@
 # Nvim GUI
 
+- desensitize mouse drag
+- key handling improvement
 - update_menu event
 
 - Nvim optionally sends various screen elements "semantically" as structured events instead of raw grid-lines,

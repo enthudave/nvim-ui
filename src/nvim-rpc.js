@@ -107,6 +107,7 @@ class NvimRPC extends EventEmitter {
 
   _enterNeovim = async () => {
     let global_variables = {};
+    this.command('set termguicolors'); // Enable true color support in Neovim
     await this.request('nvim_get_var', ['ui_font_multiplier_width'])
       .then(value => {
         global_variables['ui_font_multiplier_width'] = value;
@@ -130,7 +131,6 @@ class NvimRPC extends EventEmitter {
     this.command("autocmd VimLeavePre Copilot disable");
     this.command("command! NewGuiWindow call rpcnotify(1, 'new-window')");
     this.command("command! QuitUI call rpcnotify(1, 'quit-ui')");
-    this.command('set termguicolors'); // Enable true color support in Neovim
 
   };
 
