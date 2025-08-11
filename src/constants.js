@@ -25,7 +25,7 @@ function getBrowserWindowSettings() {
   let preloadPath = getPreloadPath();
   return {
     backgroundColor: '#fff',
-    width: 1000,
+    width: 1600,
     height: 1200,
     webPreferences: {
       contextIsolation: true,
@@ -33,6 +33,7 @@ function getBrowserWindowSettings() {
       nodeIntegration: true,
       preload: preloadPath,
       enablePreferredSizeMode: true,
+      webviewTag: true
     }
   };
 }

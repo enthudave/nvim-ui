@@ -38,24 +38,50 @@ class Renderer {
     this.cursorElement.style.transition = 'opacity 0.05s linear';
     this.cursorElement.style.zIndex = '10';
 
+    // Get the containers from the HTML
+    this.appContainer = document.getElementById('app-container');
+    this.webContainer = document.getElementById('web-container');
+
+    // The nvimContainer is now appended to the appContainer
     this.nvimContainer = document.createElement('div');
     this.nvimContainer.id = 'nvim-container';
     this.nvimContainer.style.position = 'absolute';
     this.nvimContainer.style.overflow = 'hidden';
-    this.nvimContainer.style.width = 'calc(100%)'; // Remaining width after sidebar
-    this.nvimContainer.style.height = '100vh'; // Full height of the viewport
+    this.nvimContainer.style.width = '100%'; // Takes full width of its parent
+    this.nvimContainer.style.height = '100%'; // Takes full height of its parent
     this.nvimContainer.style.boxSizing = 'border-box';
     this.nvimContainer.style.top = '0';
+
     this.nvimContainer.appendChild(this.grids[1].canvas);
     this.nvimContainer.appendChild(this.cursorElement);
-
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'relative';
-
-    document.body.appendChild(this.nvimContainer);
+    this.appContainer.appendChild(this.nvimContainer);
 
     this.initEventListeners();
+    // Example: Open devdocs.io in the webview on startup
+    this.openWebpage('https://google.com');
   };
+
+  /**
+   * Creates a webview element and loads the specified URL in the web container.
+   * @param {string} url The URL to load.
+   */
+  openWebpage = (url) => {
+    // Clear any existing webview
+    this.webContainer.innerHTML = '';
+
+    const webview = document.createElement('webview');
+    webview.setAttribute('src', url);
+
+    // Optional: Add event listeners for loading states
+    webview.addEventListener('did-start-loading', () => {
+      console.log('Webview started loading...');
+    });
+    webview.addEventListener('did-stop-loading', () => {
+      console.log('Webview finished loading.');
+    });
+
+    this.webContainer.appendChild(webview);
+  }
 
   busy_start = () => {
     this.cursorElement.style.opacity = '0.0';
@@ -76,9 +102,7 @@ class Renderer {
   default_colors_set = (args) => {
     this.highlights.set(0, { foreground: args[0][0], background: args[0][1], special: args[0][2] });
     // set window background color
-    document.body.style.backgroundColor = this.formatColor(args[0][1]);
-    //this.sidebar.style.backgroundColor = this.formatColor(args[0][1]);
-    //this.sidebar.style.color = this.formatColor(args[0][0]);
+    this.appContainer.style.backgroundColor = this.formatColor(args[0][1]);
   };
 
   _renderCell(grid, row, col, overrideHl = null) {
@@ -196,8 +220,8 @@ class Renderer {
 
             this.dirtyCells.add(`${grid},${row},${column}`);
 
-            const baseHl = this.highlights.get(hlId);
-            const defaultHl = this.highlights.get(0);
+            const baseHl = this.highlights.get(hlId) || {};
+            const defaultHl = this.highlights.get(0) || {};
 
             const isReversed = baseHl.reverse === true;
 
@@ -213,11 +237,7 @@ class Renderer {
               underline: baseHl.underline || false
             };
 
-            // const fontWidth = Math.ceil(this.grids[1].context.measureText(character).width);
-            // const normalWidth = Math.ceil(this.grids[1].context.measureText('W').width);
-            // const alternative_width = fontWidth / Math.floor(this.grids[1].cellWidth);
             const width = window.Electron.stringWidth(character);
-
 
             if (skipnext) {
               this.grids[grid].frameBuffer[row][column] = { skip: true, hl: hl };
@@ -445,7 +465,6 @@ class Renderer {
     });
   }
 
-
   handleMouseWheel(event) {
     if (!this.mouseEnabled) return;
     event.preventDefault();
@@ -486,34 +505,6 @@ class Renderer {
         modifier,
       });
     }
-  }
-  handleMouseWheel_a(event) {
-    if (!this.mouseEnabled) return;
-    event.preventDefault();
-
-    const threshold = 3;
-    const delta = event.deltaY;
-
-    if (Math.abs(delta) < threshold) return;
-
-    const direction = delta < 0 ? 'up' : 'down';
-
-    const containerRect = this.nvimContainer.getBoundingClientRect();
-    const offsetX = event.clientX - containerRect.left;
-    const offsetY = event.clientY - containerRect.top;
-
-    const col = Math.floor(offsetX / this.grids[1].cellWidth);
-    const row = Math.floor(offsetY / this.grids[1].cellHeight);
-    const modifier = this.getMouseModifier(event);
-
-    window.Electron.sendMouseEvent({
-      grid: 1,
-      row,
-      col,
-      button: 'wheel',
-      action: direction,
-      modifier,
-    });
   }
 
   handleMouseDown(event) {
@@ -568,6 +559,10 @@ class Renderer {
   };
 
   handleKeydown(event) {
+    // Prevent key events from firing when the webview is focused
+    if (event.target.tagName === 'WEBVIEW') {
+        return;
+    }
     window.Electron.sendKeyEvent({
       key: event.key,
       code: event.code,
@@ -619,44 +614,36 @@ class Renderer {
   }
 
   handleResize() {
-    const container = document.getElementById('nvim-container');
-    this.width = container.clientWidth;
-    this.height = container.clientHeight;
+    // Now we resize based on the appContainer, not the full window
+    this.width = this.appContainer.clientWidth;
+    this.height = this.appContainer.clientHeight;
     if (this.shouldResizeGrid()) {
-      //console.log('this.grids[1].columns:', this.grids[1].columns,
-      //'this.grids[1].rows:', this.grids[1].rows);
       window.Electron.sendResize(this.grids[1].columns, this.grids[1].rows);
     }
   };
 
   shouldResizeGrid() {
-    //const newColumns = Math.floor(this.width / this.grids[1].cellWidth) - 1;
     const newRows = Math.floor(this.height / this.grids[1].cellHeight) - 1;
     const newColumns = Math.floor(this.width / this.grids[1].cellWidth);
-    //const newRows = Math.floor(this.height / this.grids[1].cellHeight);
-    // Check if the grid size has changed
+
     if (newColumns !== this.grids[1].columns || newRows !== this.grids[1].rows) {
       this.grids[1].columns = newColumns;
       this.grids[1].rows = newRows;
-      return true; // Grid size has changed
+      return true;
     }
-    return false; // Grid size remains the same
+    return false;
   };
 
   resizeGrid(cols, rows) {
     if (!cols || !rows || cols <= 0 || rows <= 0) {
-      throw new Error(`Invalid grid size: cols=${cols}, rows=${rows}`);
+      // It's possible to get 0 cols/rows during initial resizing, so we just return
+      return;
     }
     if (!this.grids[1].cellWidth || !this.grids[1].cellHeight) {
       throw new Error(`Invalid cell dimensions: cellWidth=${this.grids[1].cellWidth}, cellHeight=${this.grids[1].cellHeight}`);
     }
 
     const dpr = window.devicePixelRatio || 1;
-
-    //this.grids[1].canvas.width = Math.ceil(this.width * dpr);
-    //this.grids[1].canvas.height = Math.ceil(this.height * dpr);
-    //this.grids[1].canvas.style.width = `${this.width}px`;
-    //this.grids[1].canvas.style.height = `${this.height}px`;
 
     // Adjust canvas dimensions for high-DPI scaling
     this.grids[1].canvas.width = Math.ceil(cols * this.grids[1].cellWidth * dpr);
@@ -667,10 +654,9 @@ class Renderer {
     // Apply scaling to the context
     this.grids[1].context.scale(dpr, dpr);
 
-
     // Update the frame buffer to match the new grid size
     this.grids[1].frameBuffer = Array.from({ length: rows }, () =>
-      Array.from({ length: cols }, () => ({ text: ' ', hl: this.highlights.get(0) }))
+      Array.from({ length: cols }, () => ({ text: ' ', hl: this.highlights.get(0) || {} }))
     );
   };
 
@@ -790,17 +776,11 @@ class Renderer {
             // Cursor moved or shape changed, clear timer and redraw original cell if needed
             clearInterval(this.blinkTimer);
             this.blinkTimer = null;
-            // Ensure the cell where the cursor *was* is restored.
-            // This might be complex if another flush hasn't happened.
-            // For now, we rely on the next flush or cursor render to fix it.
-            // A more robust solution might force a redraw of the old cell here.
           }
         }, this.cursorBlinkOn + this.cursorBlinkOff);
       }
     } else if (this.cursorShape === 'bar' || this.cursorShape === 'underline') {
       // For bar or underline, use the div overlay element.
-      // The underlying cell on the canvas should be in its normal state (drawn by flush).
-
       const xPx = col * currentGrid.cellWidth;
       const yPx = row * currentGrid.cellHeight;
 
@@ -858,5 +838,5 @@ class Renderer {
   };
 }
 
-//new Renderer();
-const renderer = new Renderer();
+new Renderer();
+// const renderer = new Renderer();
