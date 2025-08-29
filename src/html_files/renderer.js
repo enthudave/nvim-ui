@@ -619,6 +619,7 @@ class Renderer {
     this.height = this.appContainer.clientHeight;
     if (this.shouldResizeGrid()) {
       window.Electron.sendResize(this.grids[1].columns, this.grids[1].rows);
+      console.log('Resized grid to:', this.grids[1].columns, 'columns and', this.grids[1].rows, 'rows');
     }
   };
 
@@ -840,3 +841,40 @@ class Renderer {
 
 new Renderer();
 // const renderer = new Renderer();
+
+document.addEventListener('DOMContentLoaded', () => {
+    const appContainer = document.getElementById('app-container');
+    const webContainer = document.getElementById('web-container');
+    const divider = document.getElementById('divider');
+    let isDragging = false;
+
+    divider.addEventListener('mousedown', () => {
+        isDragging = true;
+        document.body.style.cursor = 'ew-resize';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const mainContainer = document.getElementById('main-container');
+        const rect = mainContainer.getBoundingClientRect();
+        const min = 100;
+        const dividerWidth = divider.offsetWidth;
+        let offset = e.clientX - rect.left;
+
+        // Clamp offset so both containers are at least 'min' wide
+        if (offset < min) offset = min;
+        if (offset > rect.width - min - dividerWidth) offset = rect.width - min - dividerWidth;
+
+        appContainer.style.flex = 'none';
+        webContainer.style.flex = 'none';
+        appContainer.style.width = offset + 'px';
+        webContainer.style.width = (rect.width - offset - dividerWidth) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = '';
+        }
+    });
+});

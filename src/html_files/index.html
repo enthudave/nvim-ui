@@ -13,9 +13,10 @@
             padding: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden;
+            overflow: auto;
             font-family: sans-serif;
-            background-color: #1e1e1e; /* A default dark background */
+            background-color: #1e1e1e;
+            /* A default dark background */
         }
 
         #main-container {
@@ -33,8 +34,10 @@
 
         #web-container {
             flex: 1;
-            display: flex; /* Use flexbox to manage the webview */
-            border-left: 1px solid #444; /* A subtle separator */
+            display: flex;
+            /* Use flexbox to manage the webview */
+            border-left: 1px solid #444;
+            /* A subtle separator */
         }
 
         webview {
@@ -42,15 +45,21 @@
             height: 100%;
             border: none;
         }
+
+        #divider {
+            width: 5px;
+            background: #333;
+            cursor: ew-resize;
+            z-index: 10;
+        }
     </style>
 </head>
 
 <body>
     <div id="main-container">
-        <div id="app-container">
-            </div>
-        <div id="web-container">
-            </div>
+        <div id="app-container"></div>
+        <div id="divider"></div>
+        <div id="web-container"></div>
     </div>
     <script src="renderer.js"></script>
 </body>
