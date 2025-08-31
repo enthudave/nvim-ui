@@ -1,5 +1,3 @@
-//const stringWidth = window.Electron.stringWidth;
-
 class Grid {
   constructor() {
 
@@ -41,6 +39,7 @@ class Renderer {
     // Get the containers from the HTML
     this.appContainer = document.getElementById('app-container');
     this.webContainer = document.getElementById('web-container');
+    this.divider = document.getElementById('divider');
 
     // The nvimContainer is now appended to the appContainer
     this.nvimContainer = document.createElement('div');
@@ -433,6 +432,29 @@ class Renderer {
       grid.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
       grid.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), { passive: false });
     }
+
+    this.divider.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+
+      const mouseMoveHandler = (e) => {
+        const containerRect = document.querySelector('#main-container').getBoundingClientRect();
+        let newLeftWidth = e.clientX - containerRect.left;
+
+        if (newLeftWidth < 50) newLeftWidth = 50;
+        if (newLeftWidth > containerRect.width - 50) newLeftWidth = containerRect.width - 50;
+
+        this.appContainer.style.width = `${newLeftWidth}px`;
+        this.handleResize();
+      };
+
+      const mouseUpHandler = () => {
+        document.removeEventListener('mousemove', mouseMoveHandler);
+        document.removeEventListener('mouseup', mouseUpHandler);
+      };
+
+      document.addEventListener('mousemove', mouseMoveHandler);
+      document.addEventListener('mouseup', mouseUpHandler);
+    });
   }
 
   sendMouseEvent(event, action) {
@@ -561,7 +583,7 @@ class Renderer {
   handleKeydown(event) {
     // Prevent key events from firing when the webview is focused
     if (event.target.tagName === 'WEBVIEW') {
-        return;
+      return;
     }
     window.Electron.sendKeyEvent({
       key: event.key,
@@ -842,39 +864,39 @@ class Renderer {
 new Renderer();
 // const renderer = new Renderer();
 
-document.addEventListener('DOMContentLoaded', () => {
-    const appContainer = document.getElementById('app-container');
-    const webContainer = document.getElementById('web-container');
-    const divider = document.getElementById('divider');
-    let isDragging = false;
+// document.addEventListener('DOMContentLoaded', () => {
+//     const appContainer = document.getElementById('app-container');
+//     const webContainer = document.getElementById('web-container');
+//     const divider = document.getElementById('divider');
+//     let isDragging = false;
 
-    divider.addEventListener('mousedown', () => {
-        isDragging = true;
-        document.body.style.cursor = 'ew-resize';
-    });
+//     divider.addEventListener('mousedown', () => {
+//         isDragging = true;
+//         document.body.style.cursor = 'ew-resize';
+//     });
 
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const mainContainer = document.getElementById('main-container');
-        const rect = mainContainer.getBoundingClientRect();
-        const min = 100;
-        const dividerWidth = divider.offsetWidth;
-        let offset = e.clientX - rect.left;
+//     document.addEventListener('mousemove', (e) => {
+//         if (!isDragging) return;
+//         const mainContainer = document.getElementById('main-container');
+//         const rect = mainContainer.getBoundingClientRect();
+//         const min = 100;
+//         const dividerWidth = divider.offsetWidth;
+//         let offset = e.clientX - rect.left;
 
-        // Clamp offset so both containers are at least 'min' wide
-        if (offset < min) offset = min;
-        if (offset > rect.width - min - dividerWidth) offset = rect.width - min - dividerWidth;
+//         // Clamp offset so both containers are at least 'min' wide
+//         if (offset < min) offset = min;
+//         if (offset > rect.width - min - dividerWidth) offset = rect.width - min - dividerWidth;
 
-        appContainer.style.flex = 'none';
-        webContainer.style.flex = 'none';
-        appContainer.style.width = offset + 'px';
-        webContainer.style.width = (rect.width - offset - dividerWidth) + 'px';
-    });
+//         appContainer.style.flex = 'none';
+//         webContainer.style.flex = 'none';
+//         appContainer.style.width = offset + 'px';
+//         webContainer.style.width = (rect.width - offset - dividerWidth) + 'px';
+//     });
 
-    document.addEventListener('mouseup', () => {
-        if (isDragging) {
-            isDragging = false;
-            document.body.style.cursor = '';
-        }
-    });
-});
+//     document.addEventListener('mouseup', () => {
+//         if (isDragging) {
+//             isDragging = false;
+//             document.body.style.cursor = '';
+//         }
+//     });
+// });
