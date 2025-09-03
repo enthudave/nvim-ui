@@ -38,18 +38,9 @@ class Renderer {
 
     // Get the containers from the HTML
     this.appContainer = document.getElementById('app-container');
-    this.webContainer = document.getElementById('web-container');
+    this.nvimContainer = document.getElementById('nvim-container');
     this.divider = document.getElementById('divider');
-
-    // The nvimContainer is now appended to the appContainer
-    this.nvimContainer = document.createElement('div');
-    this.nvimContainer.id = 'nvim-container';
-    this.nvimContainer.style.position = 'absolute';
-    this.nvimContainer.style.overflow = 'hidden';
-    this.nvimContainer.style.width = '100%'; // Takes full width of its parent
-    this.nvimContainer.style.height = '100%'; // Takes full height of its parent
-    this.nvimContainer.style.boxSizing = 'border-box';
-    this.nvimContainer.style.top = '0';
+    this.readContainer = document.getElementById('read-container');
 
     this.nvimContainer.appendChild(this.grids[1].canvas);
     this.nvimContainer.appendChild(this.cursorElement);
@@ -66,7 +57,7 @@ class Renderer {
    */
   openWebpage = (url) => {
     // Clear any existing webview
-    this.webContainer.innerHTML = '';
+    this.readContainer.innerHTML = '';
 
     const webview = document.createElement('webview');
     webview.setAttribute('src', url);
@@ -79,7 +70,7 @@ class Renderer {
       console.log('Webview finished loading.');
     });
 
-    this.webContainer.appendChild(webview);
+    this.readContainer.appendChild(webview);
   }
 
   busy_start = () => {

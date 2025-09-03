@@ -30,7 +30,18 @@
           width: 50%;
         }
 
-        #web-container {
+    /*
+      The 'absolute' style is required for split resizing functionality.
+      Removing it will break the ability to resize splits in the UI.
+    */
+        #nvim-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            box-sizing: border-box;
+        }
+
+        #read-container {
             flex-grow: 1;
         }
 
@@ -52,9 +63,9 @@
 
 <body>
     <div id="main-container">
-        <div id="app-container"></div>
+        <div id="app-container"><div id="nvim-container"></div></div>
         <div id="divider"></div>
-        <div id="web-container"></div>
+        <div id="read-container"></div>
     </div>
     <script src="renderer.js"></script>
 </body>
