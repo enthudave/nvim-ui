@@ -114,11 +114,9 @@ class Renderer {
     this.appContainer.style.backgroundColor = this.formatColor(args[0][1]);
   };
 
-  _renderCell(grid, row, col, overrideHl = null) {
+  renderCell(grid, row, col, overrideHl = null) {
     const cell = grid.frameBuffer[row][col];
-    if (!cell || cell.skip) {
-      return;
-    }
+    if (!cell || cell.skip) return;
 
     // Use overrideHl if provided, otherwise use the cell's own highlight.
     const { text, hl: cellHl } = cell;
@@ -178,7 +176,7 @@ class Renderer {
     // Iterate only over the dirty cells
     for (const cellKey of this.dirtyCells) {
       const [grid, row, col] = cellKey.split(',').map(Number);
-      this._renderCell(this.grids[grid], row, col);
+      this.renderCell(this.grids[grid], row, col);
     }
 
     // Clear the dirty set after flushing
@@ -428,73 +426,60 @@ class Renderer {
     this.viewport = args[0];
   };
 
-  initEventListeners() {
-    window.Electron.onGuifont((guifont) => this.setGuifont(guifont));
-    window.Electron.onGlobalVariables((args) => this.setGlobalVariables(args));
-    window.Electron.onVimCmd(({ cmd, args }) => this.handleVimCmd(cmd, args));
-    window.addEventListener('keydown', (event) => this.handleKeydown(event));
-    window.addEventListener('resize', () => this.handleResize());
+  // END of redraw API
 
-    // Iterate over all grids in the object and attach event listeners to their canvases
-    for (const [, grid] of Object.entries(this.grids)) {
-      grid.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-      grid.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
-      grid.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
-      grid.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), { passive: false });
-    }
-
-    this.divider.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-
-      const mouseMoveHandler = (e) => {
-        const containerRect = document.querySelector('#main-container').getBoundingClientRect();
-        let newLeftWidth = e.clientX - containerRect.left;
-
-        if (newLeftWidth < 50) newLeftWidth = 50;
-        if (newLeftWidth > containerRect.width - 50) newLeftWidth = containerRect.width - 50;
-
-        this.appContainer.style.width = `${newLeftWidth}px`;
-        this.handleResize();
-      };
-
-      const mouseUpHandler = () => {
-        document.removeEventListener('mousemove', mouseMoveHandler);
-        document.removeEventListener('mouseup', mouseUpHandler);
-      };
-
-      document.addEventListener('mousemove', mouseMoveHandler);
-      document.addEventListener('mouseup', mouseUpHandler);
-    });
+  formatColor(n) {
+    return `#${n.toString(16).padStart(6, '0')}`;
   }
 
-  sendMouseEvent(event, action) {
-    if (!this.mouseEnabled) return;
-
-    // Get the bounding rectangle of the nvim-container
-    const containerRect = this.nvimContainer.getBoundingClientRect();
-
-    // Calculate the cursor position relative to the nvim-container
-    const offsetX = event.clientX - containerRect.left;
-    const offsetY = event.clientY - containerRect.top;
-
-    const col = Math.floor(offsetX / this.grids[1].cellWidth);
-    let row = Math.floor(offsetY / this.grids[1].cellHeight);
-
-    const modifier = this.getMouseModifier(event);
-    const button = action === 'press' ? this.getMouseButton(event) : this.mouseButton;
-
-    if (this.isDragging && (action === 'drag' || action === 'release')) {
-      --row;
+  getMouseButton(event) {
+    switch (event.button) {
+      case 0: return 'left';
+      case 1: return 'middle';
+      case 2: return 'right';
+      default: return 'left';
     }
+  }
 
-    window.Electron.sendMouseEvent({
-      grid: 1,
-      row,
-      col,
-      button,
-      action,
-      modifier,
+  getMouseModifier(event) {
+    return (event.ctrlKey ? 'C' : '') +
+      (event.shiftKey ? 'S' : '') +
+      (event.altKey ? 'A' : '');
+  }
+
+  handleKeydown(event) {
+    // Prevent key events from firing when the webview is focused
+    if (event.target.tagName === 'WEBVIEW') {
+      return;
+    }
+    window.Electron.sendKeyEvent({
+      key: event.key,
+      code: event.code,
+      ctrl: event.ctrlKey,
+      alt: event.altKey,
+      shift: event.shiftKey,
+      meta: event.metaKey,
     });
+    event.preventDefault();
+  };
+
+  handleMouseDown(event) {
+    this.mouseDown = true;
+    this.mouseButton = this.getMouseButton(event);
+    this.sendMouseEvent(event, 'press');
+  }
+
+  handleMouseMove(event) {
+    if (!this.mouseDown) return;
+    this.isDragging = true;
+    this.sendMouseEvent(event, 'drag');
+  }
+
+  handleMouseUp(event) {
+    if (!this.mouseDown) return;
+    this.mouseDown = false;
+    this.sendMouseEvent(event, 'release');
+    this.isDragging = false
   }
 
   handleMouseWheel(event) {
@@ -539,99 +524,6 @@ class Renderer {
     }
   }
 
-  handleMouseDown(event) {
-    this.mouseDown = true;
-    this.mouseButton = this.getMouseButton(event);
-    this.sendMouseEvent(event, 'press');
-  }
-
-  getMouseButton(event) {
-    switch (event.button) {
-      case 0: return 'left';
-      case 1: return 'middle';
-      case 2: return 'right';
-      default: return 'left';
-    }
-  }
-
-  getMouseModifier(event) {
-    return (event.ctrlKey ? 'C' : '') +
-      (event.shiftKey ? 'S' : '') +
-      (event.altKey ? 'A' : '');
-  }
-
-  handleMouseMove(event) {
-    if (!this.mouseDown) return;
-    this.isDragging = true;
-    this.sendMouseEvent(event, 'drag');
-  }
-
-  handleMouseUp(event) {
-    if (!this.mouseDown) return;
-    this.mouseDown = false;
-    this.sendMouseEvent(event, 'release');
-    this.isDragging = false
-  }
-
-  formatColor(n) {
-    return `#${n.toString(16).padStart(6, '0')}`;
-  }
-
-  handleKeydown(event) {
-    // Prevent key events from firing when the webview is focused
-    if (event.target.tagName === 'WEBVIEW') {
-      return;
-    }
-    window.Electron.sendKeyEvent({
-      key: event.key,
-      code: event.code,
-      ctrl: event.ctrlKey,
-      alt: event.altKey,
-      shift: event.shiftKey,
-      meta: event.metaKey,
-    });
-    event.preventDefault();
-  };
-
-  initial_font() {
-    this.setGuifont({ fontName: 'monospace', fontSize: 16 });
-  }
-
-  setGuifont(guifont) {
-    if (guifont) {
-      //console.log('guifont: ', guifont)
-
-      const { fontName, fontSize } = guifont;
-
-      this.contextFont = `${fontSize}px ${fontName}`;
-      this.grids[1].context.font = this.contextFont;
-
-      this.fontWidth = Math.ceil(this.grids[1].context.measureText('W').width);
-      this.fontHeight = fontSize;
-      this.setCellDimensions();
-    }
-  };
-
-  setCellDimensions() {
-    let height_multiplier = (this.globalVariables['ui_font_multiplier_height'] != null)
-      ? this.globalVariables['ui_font_multiplier_height']
-      : 5;
-    let width_multiplier = (this.globalVariables['ui_font_multiplier_width'] != null)
-      ? this.globalVariables['ui_font_multiplier_width']
-      : 2.5;
-
-    //console.log('setCellDimensions: ', height_multiplier, width_multiplier);
-    this.grids[1].cellHeight = Math.ceil(this.fontHeight * (1 + height_multiplier / 10));
-    this.grids[1].cellWidth = Math.ceil(this.fontWidth * (1 + width_multiplier / 10));
-  }
-
-  setGlobalVariables(args) {
-    //console.log('setGlobalVariables:', args);
-    this.globalVariables = args;
-    this.setCellDimensions();
-    this.handleResize();
-  }
-
   handleResize() {
     // Now we resize based on the appContainer, not the full window
     this.width = this.appContainer.clientWidth;
@@ -642,55 +534,48 @@ class Renderer {
     }
   };
 
-  shouldResizeGrid() {
-    const newRows = Math.floor(this.height / this.grids[1].cellHeight) - 1;
-    const newColumns = Math.floor(this.width / this.grids[1].cellWidth);
+  initEventListeners() {
+    window.Electron.onGuifont((guifont) => this.setGuifont(guifont));
+    window.Electron.onGlobalVariables((args) => this.setGlobalVariables(args));
+    window.Electron.onVimCmd(({ cmd, args }) => this.handleVimCmd(cmd, args));
+    window.addEventListener('keydown', (event) => this.handleKeydown(event));
+    window.addEventListener('resize', () => this.handleResize());
 
-    if (newColumns !== this.grids[1].columns || newRows !== this.grids[1].rows) {
-      this.grids[1].columns = newColumns;
-      this.grids[1].rows = newRows;
-      return true;
-    }
-    return false;
-  };
-
-  resizeGrid(cols, rows) {
-    if (!cols || !rows || cols <= 0 || rows <= 0) {
-      // It's possible to get 0 cols/rows during initial resizing, so we just return
-      return;
-    }
-    if (!this.grids[1].cellWidth || !this.grids[1].cellHeight) {
-      throw new Error(`Invalid cell dimensions: cellWidth=${this.grids[1].cellWidth}, cellHeight=${this.grids[1].cellHeight}`);
+    // Iterate over all grids in the object and attach event listeners to their canvases
+    for (const [, grid] of Object.entries(this.grids)) {
+      grid.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+      grid.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+      grid.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+      grid.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), { passive: false });
     }
 
-    const dpr = window.devicePixelRatio || 1;
+    this.divider.addEventListener('mousedown', (e) => {
+      e.preventDefault();
 
-    // Adjust canvas dimensions for high-DPI scaling
-    this.grids[1].canvas.width = Math.ceil(cols * this.grids[1].cellWidth * dpr);
-    this.grids[1].canvas.height = Math.ceil(rows * this.grids[1].cellHeight * dpr);
-    this.grids[1].canvas.style.width = `${Math.ceil(cols * this.grids[1].cellWidth)}px`;
-    this.grids[1].canvas.style.height = `${Math.ceil(rows * this.grids[1].cellHeight)}px`;
+      const mouseMoveHandler = (e) => {
+        const containerRect = document.querySelector('#main-container').getBoundingClientRect();
+        let newLeftWidth = e.clientX - containerRect.left;
 
-    // Apply scaling to the context
-    this.grids[1].context.scale(dpr, dpr);
+        if (newLeftWidth < 50) newLeftWidth = 50;
+        if (newLeftWidth > containerRect.width - 50) newLeftWidth = containerRect.width - 50;
 
-    // Update the frame buffer to match the new grid size
-    this.grids[1].frameBuffer = Array.from({ length: rows }, () =>
-      Array.from({ length: cols }, () => ({ text: ' ', hl: this.highlights.get(0) || {} }))
-    );
-  };
+        this.appContainer.style.width = `${newLeftWidth}px`;
+        this.handleResize();
+      };
 
-  parseGuifont(guifont) {
-    const match = guifont.match(/([^:]+):h(\d+)/);
-    if (!match) {
-      console.error('Could not parse guifont:', guifont);
-      return null;
-    }
-    return {
-      fontName: match[1],
-      fontSize: parseInt(match[2], 10),
-    };
-  };
+      const mouseUpHandler = () => {
+        document.removeEventListener('mousemove', mouseMoveHandler);
+        document.removeEventListener('mouseup', mouseUpHandler);
+      };
+
+      document.addEventListener('mousemove', mouseMoveHandler);
+      document.addEventListener('mouseup', mouseUpHandler);
+    });
+  }
+
+  initial_font() {
+    this.setGuifont({ fontName: 'monospace', fontSize: 16 });
+  }
 
   mapCursorShape(shape) {
     switch (shape) {
@@ -705,23 +590,16 @@ class Renderer {
     }
   }
 
-  setCursorMode(modeConfig) {
-    if (!modeConfig) return;
-
-    this.cursorShape = this.mapCursorShape(modeConfig.shape);
-    this.cursorBlinkOn = modeConfig.blinkon;
-    this.cursorBlinkOff = modeConfig.blinkoff;
-
-    const forcedGroupName = 'Cursor'; // We specifically want to use the 'Cursor' group's style
-    const neovimSuggestedHlId = modeConfig.hl_id;
-
-    if (this.highlightGroups[forcedGroupName] && this.highlightGroups[forcedGroupName].id !== undefined) {
-      const forcedHlId = this.highlightGroups[forcedGroupName].id;
-      this.cursorHlId = forcedHlId;
-    } else {
-      this.cursorHlId = neovimSuggestedHlId;
+  parseGuifont(guifont) {
+    const match = guifont.match(/([^:]+):h(\d+)/);
+    if (!match) {
+      console.error('Could not parse guifont:', guifont);
+      return null;
     }
-
+    return {
+      fontName: match[1],
+      fontSize: parseInt(match[2], 10),
+    };
   };
 
   renderCursorOverlay() {
@@ -856,44 +734,129 @@ class Renderer {
       this.cursorElement.style.display = 'none';
     }
   };
+
+  resizeGrid(cols, rows) {
+    if (!cols || !rows || cols <= 0 || rows <= 0) {
+      // It's possible to get 0 cols/rows during initial resizing, so we just return
+      return;
+    }
+    if (!this.grids[1].cellWidth || !this.grids[1].cellHeight) {
+      throw new Error(`Invalid cell dimensions: cellWidth=${this.grids[1].cellWidth}, cellHeight=${this.grids[1].cellHeight}`);
+    }
+
+    const dpr = window.devicePixelRatio || 1;
+
+    // Adjust canvas dimensions for high-DPI scaling
+    this.grids[1].canvas.width = Math.ceil(cols * this.grids[1].cellWidth * dpr);
+    this.grids[1].canvas.height = Math.ceil(rows * this.grids[1].cellHeight * dpr);
+    this.grids[1].canvas.style.width = `${Math.ceil(cols * this.grids[1].cellWidth)}px`;
+    this.grids[1].canvas.style.height = `${Math.ceil(rows * this.grids[1].cellHeight)}px`;
+
+    // Apply scaling to the context
+    this.grids[1].context.scale(dpr, dpr);
+
+    // Update the frame buffer to match the new grid size
+    this.grids[1].frameBuffer = Array.from({ length: rows }, () =>
+      Array.from({ length: cols }, () => ({ text: ' ', hl: this.highlights.get(0) || {} }))
+    );
+  };
+
+  sendMouseEvent(event, action) {
+    if (!this.mouseEnabled) return;
+
+    // Get the bounding rectangle of the nvim-container
+    const containerRect = this.nvimContainer.getBoundingClientRect();
+
+    // Calculate the cursor position relative to the nvim-container
+    const offsetX = event.clientX - containerRect.left;
+    const offsetY = event.clientY - containerRect.top;
+
+    const col = Math.floor(offsetX / this.grids[1].cellWidth);
+    let row = Math.floor(offsetY / this.grids[1].cellHeight);
+
+    const modifier = this.getMouseModifier(event);
+    const button = action === 'press' ? this.getMouseButton(event) : this.mouseButton;
+
+    if (this.isDragging && (action === 'drag' || action === 'release')) {
+      --row;
+    }
+
+    window.Electron.sendMouseEvent({
+      grid: 1,
+      row,
+      col,
+      button,
+      action,
+      modifier,
+    });
+  }
+
+  setCellDimensions() {
+    let height_multiplier = (this.globalVariables['ui_font_multiplier_height'] != null)
+      ? this.globalVariables['ui_font_multiplier_height']
+      : 5;
+    let width_multiplier = (this.globalVariables['ui_font_multiplier_width'] != null)
+      ? this.globalVariables['ui_font_multiplier_width']
+      : 2.5;
+
+    //console.log('setCellDimensions: ', height_multiplier, width_multiplier);
+    this.grids[1].cellHeight = Math.ceil(this.fontHeight * (1 + height_multiplier / 10));
+    this.grids[1].cellWidth = Math.ceil(this.fontWidth * (1 + width_multiplier / 10));
+  }
+
+  setGlobalVariables(args) {
+    //console.log('setGlobalVariables:', args);
+    this.globalVariables = args;
+    this.setCellDimensions();
+    this.handleResize();
+  }
+
+  setGuifont(guifont) {
+    if (guifont) {
+      //console.log('guifont: ', guifont)
+
+      const { fontName, fontSize } = guifont;
+
+      this.contextFont = `${fontSize}px ${fontName}`;
+      this.grids[1].context.font = this.contextFont;
+
+      this.fontWidth = Math.ceil(this.grids[1].context.measureText('W').width);
+      this.fontHeight = fontSize;
+      this.setCellDimensions();
+    }
+  };
+
+  shouldResizeGrid() {
+    const newRows = Math.floor(this.height / this.grids[1].cellHeight) - 1;
+    const newColumns = Math.floor(this.width / this.grids[1].cellWidth);
+
+    if (newColumns !== this.grids[1].columns || newRows !== this.grids[1].rows) {
+      this.grids[1].columns = newColumns;
+      this.grids[1].rows = newRows;
+      return true;
+    }
+    return false;
+  };
+
+  setCursorMode(modeConfig) {
+    if (!modeConfig) return;
+
+    this.cursorShape = this.mapCursorShape(modeConfig.shape);
+    this.cursorBlinkOn = modeConfig.blinkon;
+    this.cursorBlinkOff = modeConfig.blinkoff;
+
+    const forcedGroupName = 'Cursor'; // We specifically want to use the 'Cursor' group's style
+    const neovimSuggestedHlId = modeConfig.hl_id;
+
+    if (this.highlightGroups[forcedGroupName] && this.highlightGroups[forcedGroupName].id !== undefined) {
+      const forcedHlId = this.highlightGroups[forcedGroupName].id;
+      this.cursorHlId = forcedHlId;
+    } else {
+      this.cursorHlId = neovimSuggestedHlId;
+    }
+
+  };
+
 }
 
 new Renderer();
-// const renderer = new Renderer();
-
-// document.addEventListener('DOMContentLoaded', () => {
-//     const appContainer = document.getElementById('app-container');
-//     const webContainer = document.getElementById('web-container');
-//     const divider = document.getElementById('divider');
-//     let isDragging = false;
-
-//     divider.addEventListener('mousedown', () => {
-//         isDragging = true;
-//         document.body.style.cursor = 'ew-resize';
-//     });
-
-//     document.addEventListener('mousemove', (e) => {
-//         if (!isDragging) return;
-//         const mainContainer = document.getElementById('main-container');
-//         const rect = mainContainer.getBoundingClientRect();
-//         const min = 100;
-//         const dividerWidth = divider.offsetWidth;
-//         let offset = e.clientX - rect.left;
-
-//         // Clamp offset so both containers are at least 'min' wide
-//         if (offset < min) offset = min;
-//         if (offset > rect.width - min - dividerWidth) offset = rect.width - min - dividerWidth;
-
-//         appContainer.style.flex = 'none';
-//         webContainer.style.flex = 'none';
-//         appContainer.style.width = offset + 'px';
-//         webContainer.style.width = (rect.width - offset - dividerWidth) + 'px';
-//     });
-
-//     document.addEventListener('mouseup', () => {
-//         if (isDragging) {
-//             isDragging = false;
-//             document.body.style.cursor = '';
-//         }
-//     });
-// });
