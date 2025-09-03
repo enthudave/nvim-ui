@@ -114,64 +114,6 @@ class Renderer {
     this.appContainer.style.backgroundColor = this.formatColor(args[0][1]);
   };
 
-  renderCell(grid, row, col, overrideHl = null) {
-    const cell = grid.frameBuffer[row][col];
-    if (!cell || cell.skip) return;
-
-    // Use overrideHl if provided, otherwise use the cell's own highlight.
-    const { text, hl: cellHl } = cell;
-    let currentHl = overrideHl || cellHl;
-
-    if (currentHl === undefined) {
-      // Fallback to a very basic default if no highlight info is available at all.
-      // This should ideally not happen if frameBuffer cells always have a valid hl.
-      currentHl = this.highlights.get(0) || { background: 0x000000, foreground: 0xFFFFFF, bold: false, italic: false, underline: false };
-    }
-
-    const background_x = Math.floor(col * grid.cellWidth);
-    const background_y = Math.floor(row * grid.cellHeight);
-    let x_text_offset = 0;
-    const y_text = row * grid.cellHeight + grid.cellHeight / 2;
-    let cellDisplayWidth = grid.cellWidth;
-
-    if (grid.frameBuffer[row][col + 1]?.skip) {
-      cellDisplayWidth = grid.cellWidth * 2;
-    }
-
-    const charActualWidth = grid.context.measureText(text).width;
-    x_text_offset = (cellDisplayWidth - charActualWidth) / 2;
-    const x_text_render_pos = col * grid.cellWidth + x_text_offset;
-
-    grid.context.fillStyle = this.formatColor(currentHl.background);
-    grid.context.fillRect(
-      background_x,
-      background_y,
-      Math.ceil(cellDisplayWidth),
-      Math.ceil(grid.cellHeight)
-    );
-
-    const styleParts = [];
-    if (currentHl.bold) styleParts.push('bold');
-    if (currentHl.italic) styleParts.push('italic');
-    styleParts.push(this.contextFont);
-    grid.context.font = styleParts.join(' ');
-
-    grid.context.fillStyle = this.formatColor(currentHl.foreground);
-
-    grid.context.textBaseline = 'middle';
-    grid.context.fillText(text, x_text_render_pos, y_text);
-
-    if (currentHl.underline) {
-      const underlineY = row * grid.cellHeight + grid.cellHeight - 2;
-      grid.context.beginPath();
-      grid.context.moveTo(background_x, underlineY);
-      grid.context.lineTo(background_x + cellDisplayWidth, underlineY);
-      grid.context.strokeStyle = grid.context.fillStyle;
-      grid.context.lineWidth = 1;
-      grid.context.stroke();
-    }
-  }
-
   flush = () => {
     // Iterate only over the dirty cells
     for (const cellKey of this.dirtyCells) {
@@ -601,6 +543,64 @@ class Renderer {
       fontSize: parseInt(match[2], 10),
     };
   };
+
+  renderCell(grid, row, col, overrideHl = null) {
+    const cell = grid.frameBuffer[row][col];
+    if (!cell || cell.skip) return;
+
+    // Use overrideHl if provided, otherwise use the cell's own highlight.
+    const { text, hl: cellHl } = cell;
+    let currentHl = overrideHl || cellHl;
+
+    if (currentHl === undefined) {
+      // Fallback to a very basic default if no highlight info is available at all.
+      // This should ideally not happen if frameBuffer cells always have a valid hl.
+      currentHl = this.highlights.get(0) || { background: 0x000000, foreground: 0xFFFFFF, bold: false, italic: false, underline: false };
+    }
+
+    const background_x = Math.floor(col * grid.cellWidth);
+    const background_y = Math.floor(row * grid.cellHeight);
+    let x_text_offset = 0;
+    const y_text = row * grid.cellHeight + grid.cellHeight / 2;
+    let cellDisplayWidth = grid.cellWidth;
+
+    if (grid.frameBuffer[row][col + 1]?.skip) {
+      cellDisplayWidth = grid.cellWidth * 2;
+    }
+
+    const charActualWidth = grid.context.measureText(text).width;
+    x_text_offset = (cellDisplayWidth - charActualWidth) / 2;
+    const x_text_render_pos = col * grid.cellWidth + x_text_offset;
+
+    grid.context.fillStyle = this.formatColor(currentHl.background);
+    grid.context.fillRect(
+      background_x,
+      background_y,
+      Math.ceil(cellDisplayWidth),
+      Math.ceil(grid.cellHeight)
+    );
+
+    const styleParts = [];
+    if (currentHl.bold) styleParts.push('bold');
+    if (currentHl.italic) styleParts.push('italic');
+    styleParts.push(this.contextFont);
+    grid.context.font = styleParts.join(' ');
+
+    grid.context.fillStyle = this.formatColor(currentHl.foreground);
+
+    grid.context.textBaseline = 'middle';
+    grid.context.fillText(text, x_text_render_pos, y_text);
+
+    if (currentHl.underline) {
+      const underlineY = row * grid.cellHeight + grid.cellHeight - 2;
+      grid.context.beginPath();
+      grid.context.moveTo(background_x, underlineY);
+      grid.context.lineTo(background_x + cellDisplayWidth, underlineY);
+      grid.context.strokeStyle = grid.context.fillStyle;
+      grid.context.lineWidth = 1;
+      grid.context.stroke();
+    }
+  }
 
   renderCursorOverlay() {
     if (this.blinkTimer) {
