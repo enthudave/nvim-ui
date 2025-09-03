@@ -102,12 +102,12 @@ class NvimRPC extends EventEmitter {
   _initializeWindowConnection() {
     //this.window.webContents.send('set-guifont', { fontName: 'Monospace', fontSize: 12 }, 100, 60);
     this.command("autocmd VimEnter * call rpcrequest(1, 'vimenter')");
+    this.command('set termguicolors'); // Enable true color support in Neovim
     this.request('nvim_ui_attach', [100, 60, NVIM_UI_OPTIONS]);
   }
 
   _enterNeovim = async () => {
     let global_variables = {};
-    this.command('set termguicolors'); // Enable true color support in Neovim
     await this.request('nvim_get_var', ['ui_font_multiplier_width'])
       .then(value => {
         global_variables['ui_font_multiplier_width'] = value;

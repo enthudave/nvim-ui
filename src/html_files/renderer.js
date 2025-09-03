@@ -655,7 +655,7 @@ class Renderer {
       }
 
       // Initial draw of the cell with cursor styling.
-      this._renderCell(currentGrid, row, col, blockCursorHl);
+      this.renderCell(currentGrid, row, col, blockCursorHl);
       let blockCursorIsStyled = true; // Tracks if the cell is currently styled as cursor
 
       // Handle blinking for the block cursor by redrawing the cell.
