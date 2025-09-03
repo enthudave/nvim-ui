@@ -665,10 +665,10 @@ class Renderer {
           if (this.cursorPos.grid === gridId && this.cursorPos.row === row && this.cursorPos.col === col && this.cursorShape === 'block' && this.cursorVisible) {
             blockCursorIsStyled = !blockCursorIsStyled;
             if (blockCursorIsStyled) {
-              this._renderCell(currentGrid, row, col, blockCursorHl);
+              this.renderCell(currentGrid, row, col, blockCursorHl);
             } else {
               // Redraw the cell with its original highlight attributes.
-              this._renderCell(currentGrid, row, col, originalCellHl);
+              this.renderCell(currentGrid, row, col, originalCellHl);
             }
           } else {
             // Cursor moved or shape changed, clear timer and redraw original cell if needed
