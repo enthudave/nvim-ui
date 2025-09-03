@@ -632,7 +632,7 @@ class Renderer {
     this.height = this.appContainer.clientHeight;
     if (this.shouldResizeGrid()) {
       window.Electron.sendResize(this.grids[1].columns, this.grids[1].rows);
-      console.log('Resized grid to:', this.grids[1].columns, 'columns and', this.grids[1].rows, 'rows');
+      // console.log('Resized grid to:', this.grids[1].columns, 'columns and', this.grids[1].rows, 'rows');
     }
   };
 
