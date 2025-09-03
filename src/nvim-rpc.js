@@ -85,7 +85,7 @@ class NvimRPC extends EventEmitter {
         for (const update of args) {
           const [cmd, ...args] = update; // Extract command and its arguments
 
-          this.window.webContents.send('nvim-cmd', { cmd, args }); // Send the command to the renderer
+          this.window.webContents.send('redraw-event', { cmd, args }); // Send the command to the renderer
         }
       } else if (event === 'new-window') {
         // Handle 'new-window' events by emitting a new-window event

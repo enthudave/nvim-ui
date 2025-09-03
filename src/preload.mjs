@@ -6,8 +6,8 @@ contextBridge.exposeInMainWorld('Electron', {
   getHomeDir: () => {
     return os.homedir();
   },
-  onVimCmd: (callback) => {
-    ipcRenderer.on('nvim-cmd', (_event, args) => callback(args));
+  onRedrawEvent: (callback) => {
+    ipcRenderer.on('redraw-event', (_event, args) => callback(args));
   },
   onGuifont: (callback) => {
     ipcRenderer.on('set-guifont', (_event, args) => callback(args));

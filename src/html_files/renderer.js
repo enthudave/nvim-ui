@@ -78,7 +78,7 @@ class Renderer {
   // with the use of a switch statement or if-else chains or an extra object
   // rather, we can just use the 'cmd' string directly as an index to 'this' to access the arrow
   // function with that name
-  handleVimCmd(cmd, args) {
+  handleRedrawEvent(cmd, args) {
     const handler = this[cmd];
     if (handler) {
       try {
@@ -537,7 +537,7 @@ class Renderer {
   initEventListeners() {
     window.Electron.onGuifont((guifont) => this.setGuifont(guifont));
     window.Electron.onGlobalVariables((args) => this.setGlobalVariables(args));
-    window.Electron.onVimCmd(({ cmd, args }) => this.handleVimCmd(cmd, args));
+    window.Electron.onRedrawEvent(({ cmd, args }) => this.handleRedrawEvent(cmd, args));
     window.addEventListener('keydown', (event) => this.handleKeydown(event));
     window.addEventListener('resize', () => this.handleResize());
 
