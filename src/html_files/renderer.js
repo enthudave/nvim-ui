@@ -73,6 +73,25 @@ class Renderer {
     this.readContainer.appendChild(webview);
   }
 
+  // All of the redraw commands Neovim sends are implemented as arrow functions.
+  // this way they can be called without having to 'map' strings to function names
+  // with the use of a switch statement or if-else chains or an extra object
+  // rather, we can just use the 'cmd' string directly as an index to 'this' to access the arrow
+  // function with that name
+  handleVimCmd(cmd, args) {
+    const handler = this[cmd];
+    if (handler) {
+      try {
+        handler(args);
+      } catch (error) {
+        console.error(`Error in cmd '${cmd}':`, error);
+      }
+    } else {
+      console.error(`Unhandled cmd: ${cmd}`);
+    }
+  };
+
+
   busy_start = () => {
     this.cursorElement.style.opacity = '0.0';
     if (this.blinkTimer) {
@@ -557,19 +576,6 @@ class Renderer {
   formatColor(n) {
     return `#${n.toString(16).padStart(6, '0')}`;
   }
-
-  handleVimCmd(cmd, args) {
-    const handler = this[cmd];
-    if (handler) {
-      try {
-        handler(args);
-      } catch (error) {
-        console.error(`Error in cmd '${cmd}':`, error);
-      }
-    } else {
-      console.error(`Unhandled cmd: ${cmd}`);
-    }
-  };
 
   handleKeydown(event) {
     // Prevent key events from firing when the webview is focused
