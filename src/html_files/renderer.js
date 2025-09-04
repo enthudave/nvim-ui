@@ -110,20 +110,16 @@ class Renderer {
 
   default_colors_set = (args) => {
     this.highlights.set(0, { foreground: args[0][0], background: args[0][1], special: args[0][2] });
-    // set window background color
     this.appContainer.style.backgroundColor = this.formatColor(args[0][1]);
   };
 
   flush = () => {
-    // Iterate only over the dirty cells
     for (const cellKey of this.dirtyCells) {
       const [grid, row, col] = cellKey.split(',').map(Number);
       this.renderCell(this.grids[grid], row, col);
     }
 
-    // Clear the dirty set after flushing
     this.dirtyCells.clear();
-
     this.renderCursorOverlay();
   };
 
@@ -211,7 +207,6 @@ class Renderer {
     try {
       const [grid, newCols, newRows] = args[0];
       if (!this.grids[grid]) {
-        // Create a new grid if it doesn't exist
         this.grids[grid] = new Grid();
       }
 
@@ -221,7 +216,7 @@ class Renderer {
 
     } catch (error) {
       console.error('Error in grid_resize:', error);
-      throw error; // Re-throw the error to propagate it to the caller
+      throw error;
     }
   };
 
@@ -364,7 +359,6 @@ class Renderer {
   };
 
   win_viewport = (args) => {
-    // Store the first (or only) viewport entry — later can support multigrid if needed
     this.viewport = args[0];
   };
 
@@ -390,10 +384,11 @@ class Renderer {
   }
 
   handleKeydown(event) {
+    // event.preventDefault();
     // Prevent key events from firing when the webview is focused
-    if (event.target.tagName === 'WEBVIEW') {
-      return;
-    }
+    // if (event.target.tagName === 'WEBVIEW') {
+      // return;
+    // }
     window.Electron.sendKeyEvent({
       key: event.key,
       code: event.code,
@@ -402,7 +397,6 @@ class Renderer {
       shift: event.shiftKey,
       meta: event.metaKey,
     });
-    event.preventDefault();
   };
 
   handleMouseDown(event) {
@@ -467,9 +461,8 @@ class Renderer {
   }
 
   handleResize() {
-    // Now we resize based on the appContainer, not the full window
-    this.width = this.appContainer.clientWidth;
-    this.height = this.appContainer.clientHeight;
+    this.width = this.nvimContainer.clientWidth;
+    this.height = this.nvimContainer.clientHeight;
     if (this.shouldResizeGrid()) {
       window.Electron.sendResize(this.grids[1].columns, this.grids[1].rows);
       // console.log('Resized grid to:', this.grids[1].columns, 'columns and', this.grids[1].rows, 'rows');
@@ -480,8 +473,13 @@ class Renderer {
     window.Electron.onGuifont((guifont) => this.setGuifont(guifont));
     window.Electron.onGlobalVariables((args) => this.setGlobalVariables(args));
     window.Electron.onRedrawEvent(({ cmd, args }) => this.handleRedrawEvent(cmd, args));
-    window.addEventListener('keydown', (event) => this.handleKeydown(event));
     window.addEventListener('resize', () => this.handleResize());
+    this.appContainer.addEventListener('keydown', (event) => this.handleKeydown(event));
+
+    // TODO Focus elements on click, not working
+    this.appContainer.addEventListener('click', () => this.appContainer.focus(), true);
+    this.readContainer.addEventListener('click', () => this.readContainer.focus(), true);
+    this.divider.addEventListener('click', () => this.divider.focus());
 
     // Iterate over all grids in the object and attach event listeners to their canvases
     for (const [, grid] of Object.entries(this.grids)) {
@@ -494,18 +492,35 @@ class Renderer {
     this.divider.addEventListener('mousedown', (e) => {
       e.preventDefault();
 
+      // Disable pointer events on containers to prevent event capture by webview/canvas
+      this.readContainer.style.pointerEvents = 'none';
+      this.appContainer.style.pointerEvents = 'none';
+
       const mouseMoveHandler = (e) => {
         const containerRect = document.querySelector('#main-container').getBoundingClientRect();
-        let newLeftWidth = e.clientX - containerRect.left;
+        const newLeftWidth = e.clientX - containerRect.left;
 
-        if (newLeftWidth < 50) newLeftWidth = 50;
-        if (newLeftWidth > containerRect.width - 50) newLeftWidth = containerRect.width - 50;
+        // Prevent containers from becoming too small
+        if (newLeftWidth < 50 || newLeftWidth > containerRect.width - 50) {
+          return;
+        }
 
-        this.appContainer.style.width = `${newLeftWidth}px`;
+        const newRightWidth = containerRect.width - newLeftWidth - this.divider.offsetWidth;
+
+        this.appContainer.style.flexGrow = '0';
+        this.appContainer.style.flexBasis = `${newLeftWidth}px`;
+
+        this.readContainer.style.flexGrow = '0';
+        this.readContainer.style.flexBasis = `${newRightWidth}px`;
+
         this.handleResize();
       };
 
       const mouseUpHandler = () => {
+        // Re-enable pointer events
+        this.readContainer.style.pointerEvents = 'auto';
+        this.appContainer.style.pointerEvents = 'auto';
+
         document.removeEventListener('mousemove', mouseMoveHandler);
         document.removeEventListener('mouseup', mouseUpHandler);
       };
@@ -626,7 +641,6 @@ class Renderer {
       this.cursorElement.style.display = 'none';
 
       const cursorModeHlDefinition = this.highlights.get(this.cursorHlId);
-      // Log what was retrieved from the highlights map
       const defaultColorsHl = this.highlights.get(0) || {}; // Fallback default colors
 
       let blockCursorHl = { ...originalCellHl }; // Start with a copy of the cell's original highlight.
