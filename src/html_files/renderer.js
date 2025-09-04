@@ -41,6 +41,7 @@ class Renderer {
     this.nvimContainer = document.getElementById('nvim-container');
     this.divider = document.getElementById('divider');
     this.readContainer = document.getElementById('read-container');
+    this.urlInput = document.getElementById('url-input');
 
     this.nvimContainer.appendChild(this.grids[1].canvas);
     this.nvimContainer.appendChild(this.cursorElement);
@@ -57,9 +58,10 @@ class Renderer {
    */
   openWebpage = (url) => {
     // Clear any existing webview
-    this.readContainer.innerHTML = '';
+    // this.readContainer.innerHTML = '';
 
-    const webview = document.createElement('webview');
+    // const webview = document.createElement('webview');
+    const webview = document.getElementById('webview');
     webview.setAttribute('src', url);
 
     // When the webview itself gets focus, apply our custom focus to its parent
@@ -82,7 +84,7 @@ class Renderer {
       console.log('Webview finished loading.');
     });
 
-    this.readContainer.appendChild(webview);
+    // this.readContainer.appendChild(webview);
   }
 
   // All of the redraw commands Neovim sends are implemented as arrow functions.
@@ -482,6 +484,20 @@ class Renderer {
   };
 
   initEventListeners() {
+    this.urlInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        let url = this.urlInput.value.trim();
+        if (url) {
+          // Prepend https:// if no protocol is present
+          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'https://' + url;
+          }
+          this.openWebpage(url);
+          // Optional: blur the input after submission
+          this.urlInput.blur();
+        }
+      }
+    });
     window.Electron.onGuifont((guifont) => this.setGuifont(guifont));
     window.Electron.onGlobalVariables((args) => this.setGlobalVariables(args));
     window.Electron.onRedrawEvent(({ cmd, args }) => this.handleRedrawEvent(cmd, args));
@@ -503,7 +519,13 @@ class Renderer {
     };
 
     this.appContainer.addEventListener('click', () => setFocus(this.appContainer), true);
-    this.readContainer.addEventListener('click', () => setFocus(this.readContainer), true);
+    this.readContainer.addEventListener('click', (event) => {
+      // Only set focus on the container if the click wasn't on an input field.
+      if (event.target.tagName !== 'INPUT') {
+        setFocus(this.readContainer);
+      }
+    }, true);
+    // this.readContainer.addEventListener('click', () => setFocus(this.readContainer), true);
     this.divider.addEventListener('click', () => setFocus(this.divider));
     // --- END: Manual Focus Handling ---
 

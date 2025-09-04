@@ -46,6 +46,31 @@
       flex: 1;
       box-sizing: border-box;
       padding: 4px;
+      display: flex;
+      flex-direction: column;
+      /* The following properties prevent the URL bar from stretching. Remove them. */
+      /* justify-content: center; */
+      /* align-items: center; */
+    }
+
+    #url-bar {
+      display: flex;
+      padding-bottom: 4px;
+      flex-shrink: 0; /* Prevent bar from shrinking */
+    }
+
+    #url-input {
+      flex-grow: 1;
+      background-color: #1e1e1e;
+      color: #ccc;
+      border: 1px solid #333;
+      padding: 4px 8px;
+      font-size: 14px;
+    }
+
+    #url-input:focus {
+      outline: none;
+      border-color: #007fd4;
     }
 
     webview {
@@ -75,7 +100,12 @@
       <div id="nvim-container"></div>
     </div>
     <div id="divider" tabindex="0"></div>
-    <div id="read-container" tabindex="0"></div>
+    <div id="read-container" tabindex="0">
+      <div id="url-bar">
+        <input type="text" id="url-input" placeholder="Enter URL and press Enter" />
+      </div>
+      <webview id="webview" src="https://www.example.com"></webview>
+    </div>
   </div>
   <script src="renderer.js"></script>
 </body>
