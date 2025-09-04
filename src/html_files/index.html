@@ -2,72 +2,79 @@
 <html>
 
 <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " />
-    <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
-    <title>Neovim</title>
-    <style>
-        body,
-        html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            font-family: sans-serif;
-            background-color: #1e1e1e;
-        }
-
-        #main-container {
-            display: flex;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        #app-container {
-          display: flex;
-          overflow: hidden;
-          flex: 1;
-        }
-
-        #nvim-container {
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-        }
-
-    #read-container {
-        overflow: hidden;
-        flex: 1;
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " />
+  <meta http-equiv="X-Content-Security-Policy" content="default-src 'self'; script-src 'self'" />
+  <title>Neovim</title>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      font-family: sans-serif;
+      background-color: #1e1e1e;
     }
 
-        webview {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
+    #main-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+    }
 
-        #divider {
-            width: 5px;
-            height: 100%;
-            background: #333;
-            cursor: col-resize;
-            z-index: 10;
-        }
+    #app-container {
+      display: flex;
+      overflow: hidden;
+      flex: 1;
+      padding: 4px;
+    }
 
-        #app-container:focus-within, #read-container:focus-within, #divider:focus {
-            outline: 2px solid #007fd4;
-        }
+    #nvim-container {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
+
+    #read-container {
+      overflow: hidden;
+      flex: 1;
+      box-sizing: border-box;
+      padding: 4px;
+    }
+
+    webview {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    #divider {
+      width: 5px;
+      height: 100%;
+      background: #333;
+      cursor: col-resize;
+      z-index: 10;
+    }
+
+    .is-focused {
+        /* Use box-shadow instead of outline to work with overflow: hidden */
+        box-shadow: inset 0 0 0 4px #007fd4;
+    }
     </style>
 </head>
 
 <body>
-    <div id="main-container">
-        <div id="app-container" tabindex="0"><div id="nvim-container"></div></div>
-        <div id="divider" tabindex="0"></div>
-        <div id="read-container" tabindex="0"></div>
+  <div id="main-container">
+    <div id="app-container" tabindex="0">
+      <div id="nvim-container"></div>
     </div>
-    <script src="renderer.js"></script>
+    <div id="divider" tabindex="0"></div>
+    <div id="read-container" tabindex="0"></div>
+  </div>
+  <script src="renderer.js"></script>
 </body>
 
 </html>

@@ -62,6 +62,18 @@ class Renderer {
     const webview = document.createElement('webview');
     webview.setAttribute('src', url);
 
+    // When the webview itself gets focus, apply our custom focus to its parent
+    webview.addEventListener('focus', () => {
+      const focusableContainers = [this.appContainer, this.readContainer, this.divider];
+      const targetElement = this.readContainer;
+
+      // Remove focused class from all containers
+      focusableContainers.forEach(el => el.classList.remove('is-focused'));
+
+      // Add focused class to the target
+      targetElement.classList.add('is-focused');
+    });
+
     // Optional: Add event listeners for loading states
     webview.addEventListener('did-start-loading', () => {
       console.log('Webview started loading...');
@@ -387,7 +399,7 @@ class Renderer {
     // event.preventDefault();
     // Prevent key events from firing when the webview is focused
     // if (event.target.tagName === 'WEBVIEW') {
-      // return;
+    // return;
     // }
     window.Electron.sendKeyEvent({
       key: event.key,
@@ -476,10 +488,24 @@ class Renderer {
     window.addEventListener('resize', () => this.handleResize());
     this.appContainer.addEventListener('keydown', (event) => this.handleKeydown(event));
 
-    // TODO Focus elements on click, not working
-    this.appContainer.addEventListener('click', () => this.appContainer.focus(), true);
-    this.readContainer.addEventListener('click', () => this.readContainer.focus(), true);
-    this.divider.addEventListener('click', () => this.divider.focus());
+    // --- START: Manual Focus Handling ---
+    const focusableContainers = [this.appContainer, this.readContainer, this.divider];
+
+    const setFocus = (targetElement) => {
+      // Give the element programmatic focus for accessibility and key events
+      targetElement.focus();
+
+      // Remove focused class from all containers
+      focusableContainers.forEach(el => el.classList.remove('is-focused'));
+
+      // Add focused class to the target
+      targetElement.classList.add('is-focused');
+    };
+
+    this.appContainer.addEventListener('click', () => setFocus(this.appContainer), true);
+    this.readContainer.addEventListener('click', () => setFocus(this.readContainer), true);
+    this.divider.addEventListener('click', () => setFocus(this.divider));
+    // --- END: Manual Focus Handling ---
 
     // Iterate over all grids in the object and attach event listeners to their canvases
     for (const [, grid] of Object.entries(this.grids)) {
