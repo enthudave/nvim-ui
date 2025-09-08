@@ -1,3 +1,5 @@
+const Padding = 4;
+
 class Grid {
   constructor() {
 
@@ -489,9 +491,9 @@ class Renderer {
         let url = this.urlInput.value.trim();
         if (url) {
           // Prepend https:// if no protocol is present
-          if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            url = 'https://' + url;
-          }
+          // if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          //   url = 'https://' + url;
+          // }
           this.openWebpage(url);
           // Optional: blur the input after submission
           this.urlInput.blur();
@@ -741,8 +743,8 @@ class Renderer {
       }
     } else if (this.cursorShape === 'bar' || this.cursorShape === 'underline') {
       // For bar or underline, use the div overlay element.
-      const xPx = col * currentGrid.cellWidth;
-      const yPx = row * currentGrid.cellHeight;
+      const xPx = (col * currentGrid.cellWidth) + Padding;
+      const yPx = (row * currentGrid.cellHeight) + Padding;
 
       this.cursorElement.style.display = 'block';
       this.cursorElement.style.position = 'absolute';
