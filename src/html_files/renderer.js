@@ -398,7 +398,7 @@ class Renderer {
   }
 
   handleKeydown(event) {
-    // event.preventDefault();
+    event.preventDefault();
     // Prevent key events from firing when the webview is focused
     // if (event.target.tagName === 'WEBVIEW') {
     // return;
