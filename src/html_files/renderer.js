@@ -66,18 +66,6 @@ class Renderer {
     const webview = document.getElementById('webview');
     webview.setAttribute('src', url);
 
-    // When the webview itself gets focus, apply our custom focus to its parent
-    webview.addEventListener('focus', () => {
-      const focusableContainers = [this.appContainer, this.readContainer, this.divider];
-      const targetElement = this.readContainer;
-
-      // Remove focused class from all containers
-      focusableContainers.forEach(el => el.classList.remove('is-focused'));
-
-      // Add focused class to the target
-      targetElement.classList.add('is-focused');
-    });
-
     // Optional: Add event listeners for loading states
     webview.addEventListener('did-start-loading', () => {
       console.log('Webview started loading...');
@@ -476,6 +464,23 @@ class Renderer {
     }
   }
 
+  handleReaderPageDown = () => {
+    console.log('Page Down Received');
+    const webview = document.getElementById('webview');
+    if (webview) {
+      webview.sendInputEvent({ type: 'keyDown', keyCode: 'PageDown' });
+      webview.sendInputEvent({ type: 'keyUp', keyCode: 'PageDown' });
+    }
+  };
+
+  handleReaderPageUp = () => {
+    const webview = document.getElementById('webview');
+    if (webview) {
+      webview.sendInputEvent({ type: 'keyDown', keyCode: 'PageUp' });
+      webview.sendInputEvent({ type: 'keyUp', keyCode: 'PageUp' });
+    }
+  };
+
   handleResize() {
     this.width = this.nvimContainer.clientWidth;
     this.height = this.nvimContainer.clientHeight;
@@ -500,36 +505,18 @@ class Renderer {
         }
       }
     });
+
+    window.Electron.onReaderPageUp(() => {
+      this.handleReaderPageUp();
+    });
+    window.Electron.onReaderPageDown(() => {
+      this.handleReaderPageDown();
+    });
     window.Electron.onGuifont((guifont) => this.setGuifont(guifont));
     window.Electron.onGlobalVariables((args) => this.setGlobalVariables(args));
     window.Electron.onRedrawEvent(({ cmd, args }) => this.handleRedrawEvent(cmd, args));
     window.addEventListener('resize', () => this.handleResize());
     this.appContainer.addEventListener('keydown', (event) => this.handleKeydown(event));
-
-    // --- START: Manual Focus Handling ---
-    const focusableContainers = [this.appContainer, this.readContainer, this.divider];
-
-    const setFocus = (targetElement) => {
-      // Give the element programmatic focus for accessibility and key events
-      targetElement.focus();
-
-      // Remove focused class from all containers
-      focusableContainers.forEach(el => el.classList.remove('is-focused'));
-
-      // Add focused class to the target
-      targetElement.classList.add('is-focused');
-    };
-
-    this.appContainer.addEventListener('click', () => setFocus(this.appContainer), true);
-    this.readContainer.addEventListener('click', (event) => {
-      // Only set focus on the container if the click wasn't on an input field.
-      if (event.target.tagName !== 'INPUT') {
-        setFocus(this.readContainer);
-      }
-    }, true);
-    // this.readContainer.addEventListener('click', () => setFocus(this.readContainer), true);
-    this.divider.addEventListener('click', () => setFocus(this.divider));
-    // --- END: Manual Focus Handling ---
 
     // Iterate over all grids in the object and attach event listeners to their canvases
     for (const [, grid] of Object.entries(this.grids)) {

@@ -13,8 +13,14 @@ contextBridge.exposeInMainWorld('Electron', {
     ipcRenderer.on('set-guifont', (_event, args) => callback(args));
   },
 
-  onGlobalVariables : (callback) => {
+  onGlobalVariables: (callback) => {
     ipcRenderer.on('set-global-variables', (_event, args) => callback(args));
+  },
+  onReaderPageUp: (callback) => {
+    ipcRenderer.on('reader-page-up', () => callback());
+  },
+  onReaderPageDown: (callback) => {
+    ipcRenderer.on('reader-page-down', () => callback());
   },
   sendResize: (cols, rows) => {
     ipcRenderer.send('resize-request', { cols, rows });
@@ -36,4 +42,5 @@ contextBridge.exposeInMainWorld('Electron', {
   },
   readDir: (path) => ipcRenderer.invoke('read-dir', path),
   openFile: (path) => ipcRenderer.send('open-file', path),
+  sendConnectionChoice: (choice) => ipcRenderer.send('connection-choice', choice),
 });

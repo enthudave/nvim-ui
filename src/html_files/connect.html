@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Connect to Neovim</title>
+  <style>
+    body { font-family: sans-serif; background-color: #282c34; color: #abb2bf; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    #container { display: flex; flex-direction: column; gap: 15px; padding: 20px; border: 1px solid #3e4451; border-radius: 5px; }
+    h2 { margin-top: 0; }
+    button { padding: 10px; cursor: pointer; background-color: #61afef; color: #282c34; border: none; border-radius: 3px; }
+    button:hover { background-color: #528bce; }
+    input { padding: 8px; background-color: #3e4451; border: 1px solid #5c6370; color: #abb2bf; border-radius: 3px; }
+    .socket-group { display: flex; flex-direction: column; gap: 8px; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h2>Connect to Neovim</h2>
+    <button id="spawn">Start a new Neovim instance</button>
+    <button id="container">Start a new Neovim instance in a container</button>
+    <div class="socket-group">
+      <input type="text" id="socketPath" placeholder="Enter socket path (e.g., /tmp/nvim.sock)">
+      <button id="connect">Connect to socket</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('spawn').addEventListener('click', () => {
+      window.Electron.sendConnectionChoice({ type: 'spawn' });
+    });
+
+    document.getElementById('container').addEventListener('click', () => {
+      window.Electron.sendConnectionChoice({ type: 'container' });
+    });
+
+    document.getElementById('connect').addEventListener('click', () => {
+      const socketPath = document.getElementById('socketPath').value;
+      if (socketPath) {
+        window.Electron.sendConnectionChoice({ type: 'connect', socketPath });
+      } else {
+        alert('Please enter a socket path.');
+      }
+    });
+  </script>
+</body>
+</html>

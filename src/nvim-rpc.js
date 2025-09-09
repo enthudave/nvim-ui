@@ -2,7 +2,7 @@ import { createConnection } from 'net';
 import { createDecodeStream, encode } from 'msgpack-lite';
 import { EventEmitter } from 'events';
 import { spawn } from 'child_process';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import { NVIM_UI_OPTIONS, getBrowserWindowSettings } from './constants.js';
 import { translateKey } from './main-utils.js';
 import path from 'path';
@@ -10,52 +10,115 @@ import path from 'path';
 // NvimRPC class facilitates communication between an Electron application and Neovim
 // using a message-passing protocol over a socket connection.
 class NvimRPC extends EventEmitter {
-  constructor({ socketPath = null, args = [] }) {
+  constructor({ args = [] }) {
     super();
     this.msgId = 0; // Unique message ID for tracking requests
     this.pending = new Map(); // Map to hold pending requests
     this.window = new BrowserWindow(getBrowserWindowSettings());
+    this.args = args;
 
     ipcMain.on('mouse-event', this._onMouseEvent);
     ipcMain.on('resize-request', this._onResizeRequest);
     ipcMain.on('key-event', this._onKeyEvent);
 
     this.window.webContents.on('did-finish-load', () => {
-      this._initializeWindowConnection();
+      if (this.client) {
+        this._initializeWindowConnection();
+      } else {
+        console.error('[NvimRPC] Client not connected');
+      }
     });
 
     this.window.on('close', () => {
       this._removeEventListeners();
     });
 
-    if (!socketPath) {
-      // If no socket path is provided, spawn a new Neovim process
-      this.child = spawn('nvim', ['--embed', ...args]); // Start Neovim in embedded mode
-      this.client = this.child.stdin; // Use child process stdin for communication
-      const decoder = createDecodeStream(); // Create a decoder stream for incoming messages
-      this.child.stdout.pipe(decoder); // Pipe Neovim's stdout to the decoder
+    this._promptForConnection();
+  }
 
-      decoder.on('data', (msg) => this._handleMessage(msg)); // Handle incoming messages
-      decoder.on('error', (err) => this.emit('error', err)); // Emit error events
-      this.child.on('spawn', () => this._loadWindow());
-      this.child.on('error', (err) => console.error('[NvimRPC] error: ', err)); // Emit error events for child process
-      this.child.on('close', async () => {
-        await this.close(); // Close the connection when the child process closes
-        this.emit('close');
-      }); // Emit close event when the process closes
+  _promptForConnection() {
+    const connectPagePath = path.join(app.getAppPath(), 'src', 'html_files', 'connect.html');
+    this.window.loadFile(connectPagePath);
 
-    } else {
-      // If a socket path is provided, create a TCP connection to that socket
-      this.socketPath = socketPath; // Store the socket path
-      this.client = createConnection(this.socketPath); // Create a connection to the socket
-      const decoder = createDecodeStream(); // Create a decoder stream for incoming messages
-      this.client.pipe(decoder); // Pipe the socket data to the decoder
-      decoder.on('data', (msg) => this._handleMessage(msg)); // Handle incoming messages
-      decoder.on('error', (err) => this.emit('error', err)); // Emit error events
-      this.client.on('connect', () => this._loadWindow());
-      this.client.on('error', (err) => console.error('[NvimRPC] error: ', err)); // Emit error events for the socket
-      this.client.on('close', () => this.emit('close')); // Emit close event when the connection closes
-    }
+    ipcMain.once('connection-choice', (event, choice) => {
+      if (event.sender !== this.window.webContents) return;
+
+      if (choice.type === 'spawn') {
+        this._spawnNvim();
+      } else if (choice.type === 'connect' && choice.socketPath) {
+        this._connectToSocket(choice.socketPath);
+      } else if (choice.type === 'container') {
+        this._connectToContainer();
+      }
+    });
+  }
+  _connectToContainer() {
+    // Use 'docker exec' to run a command in an already running container.
+    // The '-i' flag is crucial to keep stdin open.
+    this.child = spawn('docker', ['exec', '-i', 'devcontainer', 'nvim', '--embed']);
+
+    // this.child = spawn('nvim', ['--embed', ...this.args]); // Start Neovim in embedded mode
+    this.client = this.child.stdin; // Use child process stdin for communication
+
+    const decoder = createDecodeStream(); // Create a decoder stream for incoming messages
+    this.child.stdout.pipe(decoder); // Pipe Neovim's stdout to the decoder
+
+    // Wait for the first data event from nvim before loading the window.
+    // This ensures nvim is ready before the UI tries to attach.
+    // decoder.once('data', (msg) => {
+    // this._loadWindow();
+    // this._handleMessage(msg); // Process the first message
+    // });
+
+    decoder.on('data', (msg) => this._handleMessage(msg)); // Handle subsequent messages
+    decoder.on('error', (err) => this.emit('error', err)); // Emit error events
+
+    this.child.on('spawn', () => this._loadWindow());
+    this.child.on('error', (err) => {
+      console.error('[NvimRPC] docker error: ', err);
+      dialog.showErrorBox('Docker Error', `Failed to execute nvim in container 'devcontainer'.\nIs the container running?\n${err.message}`);
+      this._promptForConnection();
+    });
+    this.child.on('close', async (code) => {
+      console.log(`[NvimRPC] docker process exited with code ${code}`);
+      await this.close();
+      this.emit('close');
+    });
+  }
+
+
+  _spawnNvim() {
+    // If no socket path is provided, spawn a new Neovim process
+    this.child = spawn('nvim', ['--embed', ...this.args]); // Start Neovim in embedded mode
+    this.client = this.child.stdin; // Use child process stdin for communication
+    const decoder = createDecodeStream(); // Create a decoder stream for incoming messages
+    this.child.stdout.pipe(decoder); // Pipe Neovim's stdout to the decoder
+
+    decoder.on('data', (msg) => this._handleMessage(msg)); // Handle incoming messages
+    decoder.on('error', (err) => this.emit('error', err)); // Emit error events
+    this.child.on('spawn', () => this._loadWindow());
+    this.child.on('error', (err) => console.error('[NvimRPC] error: ', err)); // Emit error events for child process
+    this.child.on('close', async () => {
+      await this.close(); // Close the connection when the child process closes
+      this.emit('close');
+    }); // Emit close event when the process closes
+  }
+
+  _connectToSocket(socketPath) {
+    // If a socket path is provided, create a TCP connection to that socket
+    this.socketPath = socketPath; // Store the socket path
+    this.client = createConnection(this.socketPath); // Create a connection to the socket
+    const decoder = createDecodeStream(); // Create a decoder stream for incoming messages
+    this.client.pipe(decoder); // Pipe the socket data to the decoder
+    decoder.on('data', (msg) => this._handleMessage(msg)); // Handle incoming messages
+    decoder.on('error', (err) => {
+      this.emit('error', err);
+      dialog.showErrorBox('Connection Error', `Failed to connect to socket: ${socketPath}\n${err.message}`);
+      this._promptForConnection(); // Show connection prompt again on error
+    });
+    this.client.on('connect', () => this._loadWindow());
+    this.client.on('error', (err) => console.error('[NvimRPC] error: ', err)); // Emit error events for the socket
+    this.client.on('close', () => this.emit('close')); // Emit close event when the connection closes
   }
 
   // Processes a decoded message based on its type
@@ -93,6 +156,10 @@ class NvimRPC extends EventEmitter {
       } else if (event === 'quit-ui') {
         // Handle 'quit-ui' events by closing the connection
         this.emit('quit-ui'); // Emit a quit-ui event
+      } else if (event === 'reader-page-down') {
+        this.window.webContents.send('reader-page-down');
+      } else if (event === 'reader-page-up') {
+        this.window.webContents.send('reader-page-up');
       } else {
         console.error('[NVIMRPC] ', event); // Log unhandled events
       }
@@ -126,11 +193,13 @@ class NvimRPC extends EventEmitter {
         console.error('Failed to get variable:', err);
       });
 
-    this.window.webContents.send('set-global-variables',  global_variables );
+    this.window.webContents.send('set-global-variables', global_variables);
 
     this.command("autocmd VimLeavePre Copilot disable");
     this.command("command! NewGuiWindow call rpcnotify(1, 'new-window')");
     this.command("command! QuitUI call rpcnotify(1, 'quit-ui')");
+    this.command("command! ReaderPageDown call rpcnotify(1, 'reader-page-down')");
+    this.command("command! ReaderPageUp call rpcnotify(1, 'reader-page-up')");
 
   };
 
