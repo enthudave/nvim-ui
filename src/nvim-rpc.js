@@ -160,6 +160,8 @@ class NvimRPC extends EventEmitter {
         this.window.webContents.send('reader-page-down');
       } else if (event === 'reader-page-up') {
         this.window.webContents.send('reader-page-up');
+      } else if (event === 'reader-toggle') {
+        this.window.webContents.send('reader-toggle');
       } else {
         console.error('[NVIMRPC] ', event); // Log unhandled events
       }
@@ -200,6 +202,7 @@ class NvimRPC extends EventEmitter {
     this.command("command! QuitUI call rpcnotify(1, 'quit-ui')");
     this.command("command! ReaderPageDown call rpcnotify(1, 'reader-page-down')");
     this.command("command! ReaderPageUp call rpcnotify(1, 'reader-page-up')");
+    this.command("command! ReaderToggle call rpcnotify(1, 'reader-toggle')");
 
   };
 

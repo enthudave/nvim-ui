@@ -51,8 +51,10 @@ class Renderer {
     this.appContainer.appendChild(this.nvimContainer);
 
     this.initEventListeners();
-    // Example: Open devdocs.io in the webview on startup
+    this.handleReaderToggle();
     this.openWebpage('https://google.com');
+    // document.getElementById('main-container').focus();
+    this.appContainer.focus();
   };
 
   /**
@@ -497,6 +499,21 @@ class Renderer {
     }
   };
 
+  handleReaderToggle = () => {
+    const isHidden = this.readContainer.style.display === 'none';
+    if (isHidden) {
+      // Show the reader and divider
+      this.readContainer.style.display = 'flex'; // Use 'flex' as it's a flex item
+      this.divider.style.display = 'block'; // Or 'flex', depending on its styling
+    } else {
+      // Hide the reader and divider
+      this.readContainer.style.display = 'none';
+      this.divider.style.display = 'none';
+    }
+    // Recalculate the nvim grid size
+    this.handleResize();
+  };
+
   handleResize() {
     this.width = this.nvimContainer.clientWidth;
     this.height = this.nvimContainer.clientHeight;
@@ -527,6 +544,9 @@ class Renderer {
     });
     window.Electron.onReaderPageDown(() => {
       this.handleReaderPageDown();
+    });
+    window.Electron.onReaderToggle(() => {
+      this.handleReaderToggle();
     });
     window.Electron.onGuifont((guifont) => this.setGuifont(guifont));
     window.Electron.onGlobalVariables((args) => this.setGlobalVariables(args));
