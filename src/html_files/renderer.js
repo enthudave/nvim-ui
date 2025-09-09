@@ -44,6 +44,7 @@ class Renderer {
     this.divider = document.getElementById('divider');
     this.readContainer = document.getElementById('read-container');
     this.urlInput = document.getElementById('url-input');
+    this.webview = document.getElementById('webview');
 
     this.nvimContainer.appendChild(this.grids[1].canvas);
     this.nvimContainer.appendChild(this.cursorElement);
@@ -464,20 +465,35 @@ class Renderer {
     }
   }
 
-  handleReaderPageDown = () => {
-    console.log('Page Down Received');
-    const webview = document.getElementById('webview');
-    if (webview) {
-      webview.sendInputEvent({ type: 'keyDown', keyCode: 'PageDown' });
-      webview.sendInputEvent({ type: 'keyUp', keyCode: 'PageDown' });
+  handleReaderPageUp = () => {
+    if (this.webview) {
+      const rect = this.webview.getBoundingClientRect();
+      const scrollDelta = Math.floor(rect.height * 0.9);
+      const x = Math.floor(rect.width / 2);
+      const y = Math.floor(rect.height / 2);
+      this.webview.sendInputEvent({
+        type: 'mouseWheel',
+        x,
+        y,
+        deltaX: 0,
+        deltaY: scrollDelta,
+      });
     }
   };
 
-  handleReaderPageUp = () => {
-    const webview = document.getElementById('webview');
-    if (webview) {
-      webview.sendInputEvent({ type: 'keyDown', keyCode: 'PageUp' });
-      webview.sendInputEvent({ type: 'keyUp', keyCode: 'PageUp' });
+  handleReaderPageDown = () => {
+    if (this.webview) {
+      const rect = this.webview.getBoundingClientRect();
+      const scrollDelta = Math.floor(rect.height * 0.9);
+      const x = Math.floor(rect.width / 2);
+      const y = Math.floor(rect.height / 2);
+      this.webview.sendInputEvent({
+        type: 'mouseWheel',
+        x,
+        y,
+        deltaX: 0,
+        deltaY: -scrollDelta,
+      });
     }
   };
 
