@@ -47,15 +47,19 @@ class NvimRPC extends EventEmitter {
         this._spawnNvim();
       } else if (choice.type === 'connect' && choice.socketPath) {
         this._connectToSocket(choice.socketPath);
-      } else if (choice.type === 'container') {
-        this._connectToContainer();
+      } else if (choice.type === 'container' && choice.containerCommand) {
+        this._connectToContainer(choice.containerCommand);
       }
     });
   }
-  _connectToContainer() {
+  _connectToContainer(containerCommand) {
     // Use 'docker exec' to run a command in an already running container.
     // The '-i' flag is crucial to keep stdin open.
-    this.child = spawn('docker', ['exec', '-i', 'devcontainer', 'nvim', '--embed']);
+    containerCommand = containerCommand.split(' ');
+    const command = containerCommand.slice(0, 1)[0];
+    const args = containerCommand.slice(1);
+    this.child = spawn(command, args);
+    // this.child = spawn('docker', ['exec', '-i', 'devcontainer', 'nvim', '--embed']);
 
     // this.child = spawn('nvim', ['--embed', ...this.args]); // Start Neovim in embedded mode
     this.client = this.child.stdin; // Use child process stdin for communication
