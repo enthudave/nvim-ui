@@ -48,7 +48,6 @@ class Renderer {
 
     this.nvimContainer.appendChild(this.grids[1].canvas);
     this.nvimContainer.appendChild(this.cursorElement);
-    this.appContainer.appendChild(this.nvimContainer);
 
     this.initEventListeners();
     this.handleReaderToggle();
@@ -56,27 +55,16 @@ class Renderer {
     this.appContainer.focus();
   };
 
-  /**
-   * Creates a webview element and loads the specified URL in the web container.
-   * @param {string} url The URL to load.
-   */
   openWebpage = (url) => {
-    // Clear any existing webview
-    // this.readContainer.innerHTML = '';
-
-    // const webview = document.createElement('webview');
     const webview = document.getElementById('webview');
     webview.setAttribute('src', url);
 
-    // Optional: Add event listeners for loading states
     webview.addEventListener('did-start-loading', () => {
       console.log('Webview started loading...');
     });
     webview.addEventListener('did-stop-loading', () => {
       console.log('Webview finished loading.');
     });
-
-    // this.readContainer.appendChild(webview);
   }
 
   // All of the redraw commands Neovim sends are implemented as arrow functions.
@@ -205,7 +193,7 @@ class Renderer {
       }
     } catch (error) {
       console.error('Error in grid_line:', error);
-      throw error; // Re-throw the error to propagate it to the caller
+      throw error;
     }
   };
 
@@ -228,13 +216,11 @@ class Renderer {
 
   grid_scroll = (args) => {
     for (const entry of args) {
-      // Support both 6- and 7-element arrays for backward compatibility
       const [grid, top, bot, left, right, rows, cols = 0] = entry;
 
       const height = bot - top;
       const width = right - left;
 
-      // Vertical scroll (existing logic)
       const copyRegionVertical = (src, dest) => {
         for (let i = 0; i < height; i++) {
           const srcRow = src(i);
@@ -255,7 +241,6 @@ class Renderer {
         }
       };
 
-      // Horizontal scroll
       const copyRegionHorizontal = (src, dest) => {
         for (let row = top; row < bot; row++) {
           if (!this.grids[grid].frameBuffer[row]) continue;
@@ -293,11 +278,10 @@ class Renderer {
   };
 
   hl_attr_define = (args) => {
-    for (const [id, hl, , info_array] of args) { // Renamed 'info' to 'info_array' for clarity
+    for (const [id, hl, , info_array] of args) {
       if (id === 0) console.error(
         'hl_attr_define: id 0 is expected to be coming from default_colors_set!');
-      // Log the raw 'hl' object and the 'info_array'
-      this.highlights.set(id, { ...hl, info: info_array }); // Store info_array as 'info'
+      this.highlights.set(id, { ...hl, info: info_array });
     }
   };
 
@@ -391,10 +375,6 @@ class Renderer {
 
   handleKeydown(event) {
     event.preventDefault();
-    // Prevent key events from firing when the webview is focused
-    // if (event.target.tagName === 'WEBVIEW') {
-    // return;
-    // }
     window.Electron.sendKeyEvent({
       key: event.key,
       code: event.code,
@@ -431,7 +411,6 @@ class Renderer {
     const threshold = 3;
     const { deltaY, deltaX } = event;
 
-    // If neither axis exceeds threshold, do nothing
     if (Math.abs(deltaY) < threshold && Math.abs(deltaX) < threshold) return;
 
     const containerRect = this.nvimContainer.getBoundingClientRect();
@@ -442,7 +421,6 @@ class Renderer {
     const row = Math.floor(offsetY / this.grids[1].cellHeight);
     const modifier = this.getMouseModifier(event);
 
-    // Prioritize the axis with the larger delta
     if (Math.abs(deltaY) >= Math.abs(deltaX)) {
       const direction = deltaY < 0 ? 'up' : 'down';
       window.Electron.sendMouseEvent({
@@ -501,15 +479,12 @@ class Renderer {
   handleReaderToggle = () => {
     const isHidden = this.readContainer.style.display === 'none';
     if (isHidden) {
-      // Show the reader and divider
-      this.readContainer.style.display = 'flex'; // Use 'flex' as it's a flex item
-      this.divider.style.display = 'block'; // Or 'flex', depending on its styling
+      this.readContainer.style.display = 'flex';
+      this.divider.style.display = 'block';
     } else {
-      // Hide the reader and divider
       this.readContainer.style.display = 'none';
       this.divider.style.display = 'none';
     }
-    // Recalculate the nvim grid size
     this.handleResize();
   };
 
@@ -528,13 +503,7 @@ class Renderer {
       if (event.key === 'Enter') {
         let url = this.urlInput.value.trim();
         if (url) {
-          // Prepend https:// if no protocol is present
-          // if (!url.startsWith('http://') && !url.startsWith('https://')) {
-          //   url = 'https://' + url;
-          // }
           this.openWebpage(url);
-          // Optional: blur the input after submission
-          // this.urlInput.blur();
         }
       }
     });
@@ -562,15 +531,10 @@ class Renderer {
       this.readContainer.classList.add('is-focused');
     });
 
-    // Iterate over all grids in the object and attach event listeners to their canvases
     for (const [, grid] of Object.entries(this.grids)) {
-      // grid.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
       grid.canvas.addEventListener('mousedown', (event) => this.handleMouseDown(event));
-      // grid.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
       grid.canvas.addEventListener('mousemove', (event) => this.handleMouseMove(event));
-      // grid.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
       grid.canvas.addEventListener('mouseup', (event) => this.handleMouseUp(event));
-      // grid.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), { passive: false });
       grid.canvas.addEventListener('mousewheel', (event) => this.handleMouseWheel(event), { passive: false });
     }
 
@@ -578,7 +542,6 @@ class Renderer {
       e.preventDefault();
 
       this.divider.focus();
-      // Disable pointer events on containers to prevent event capture by webview/canvas
       this.readContainer.style.pointerEvents = 'none';
       this.appContainer.style.pointerEvents = 'none';
 
@@ -603,7 +566,6 @@ class Renderer {
       };
 
       const mouseUpHandler = () => {
-        // Re-enable pointer events
         this.readContainer.style.pointerEvents = 'auto';
         this.appContainer.style.pointerEvents = 'auto';
         this.divider.blur();
