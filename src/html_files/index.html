@@ -77,6 +77,8 @@
       width: 100%;
       height: 100%;
       border: none;
+      padding: 4px;
+      box-sizing: border-box;
     }
 
     #divider {
@@ -87,10 +89,20 @@
       z-index: 10;
     }
 
-    .is-focused {
+    #app-container:focus, #read-container:focus {
         /* Use box-shadow instead of outline to work with overflow: hidden */
-        box-shadow: inset 0 0 0 4px #007fd4;
+        /* box-shadow: inset 0 0 0 4px #007fd4; */
+        outline: none;
     }
+
+    #url-input:focus, #divider:focus {
+      outline: auto;
+    }
+
+    .is-focused {
+      box-shadow: inset 0 0 0 4px #007fd4;
+    }
+
     </style>
 </head>
 
@@ -101,10 +113,10 @@
     </div>
     <div id="divider" tabindex="0"></div>
     <div id="read-container" tabindex="0">
-      <div id="url-bar">
-        <input type="text" id="url-input" placeholder="Enter URL and press Enter" />
+      <div id="url-bar" tabindex="0">
+        <input type="text" id="url-input" placeholder="Enter URL and press Enter"/>
       </div>
-      <webview id="webview" src="https://www.example.com"></webview>
+      <webview id="webview" src="https://www.example.com" tabindex="0"></webview>
     </div>
   </div>
   <script src="renderer.js"></script>

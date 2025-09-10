@@ -53,7 +53,6 @@ class Renderer {
     this.initEventListeners();
     this.handleReaderToggle();
     this.openWebpage('https://google.com');
-    // document.getElementById('main-container').focus();
     this.appContainer.focus();
   };
 
@@ -524,6 +523,7 @@ class Renderer {
   };
 
   initEventListeners() {
+
     this.urlInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         let url = this.urlInput.value.trim();
@@ -534,7 +534,7 @@ class Renderer {
           // }
           this.openWebpage(url);
           // Optional: blur the input after submission
-          this.urlInput.blur();
+          // this.urlInput.blur();
         }
       }
     });
@@ -553,18 +553,31 @@ class Renderer {
     window.Electron.onRedrawEvent(({ cmd, args }) => this.handleRedrawEvent(cmd, args));
     window.addEventListener('resize', () => this.handleResize());
     this.appContainer.addEventListener('keydown', (event) => this.handleKeydown(event));
+    this.appContainer.addEventListener('focus', () => {
+      this.readContainer.classList.remove('is-focused');
+      this.appContainer.classList.add('is-focused');
+    });
+    this.appContainer.addEventListener('blur', () => {
+      this.appContainer.classList.remove('is-focused');
+      this.readContainer.classList.add('is-focused');
+    });
 
     // Iterate over all grids in the object and attach event listeners to their canvases
     for (const [, grid] of Object.entries(this.grids)) {
-      grid.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
-      grid.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
-      grid.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
-      grid.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), { passive: false });
+      // grid.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+      grid.canvas.addEventListener('mousedown', (event) => this.handleMouseDown(event));
+      // grid.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+      grid.canvas.addEventListener('mousemove', (event) => this.handleMouseMove(event));
+      // grid.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+      grid.canvas.addEventListener('mouseup', (event) => this.handleMouseUp(event));
+      // grid.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), { passive: false });
+      grid.canvas.addEventListener('mousewheel', (event) => this.handleMouseWheel(event), { passive: false });
     }
 
     this.divider.addEventListener('mousedown', (e) => {
       e.preventDefault();
 
+      this.divider.focus();
       // Disable pointer events on containers to prevent event capture by webview/canvas
       this.readContainer.style.pointerEvents = 'none';
       this.appContainer.style.pointerEvents = 'none';
@@ -593,6 +606,7 @@ class Renderer {
         // Re-enable pointer events
         this.readContainer.style.pointerEvents = 'auto';
         this.appContainer.style.pointerEvents = 'auto';
+        this.divider.blur();
 
         document.removeEventListener('mousemove', mouseMoveHandler);
         document.removeEventListener('mouseup', mouseUpHandler);
@@ -946,4 +960,5 @@ class Renderer {
 
 }
 
-new Renderer();
+let renderer = new Renderer();
+renderer.appContainer.focus();
